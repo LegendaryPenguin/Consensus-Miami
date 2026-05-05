@@ -1,0 +1,7 @@
+# CDP LLM Full Placeholder
+
+This file should be replaced by running:
+
+`curl -L https://docs.cdp.coinbase.com/llms-full.txt -o docs/cdp-llms-full.txt`
+
+Phase 0 not executed in this run; keep this placeholder tracked until replaced.
