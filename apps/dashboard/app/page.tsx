@@ -20,6 +20,7 @@ export default function Page() {
   const [events, setEvents] = useState<TollGateEvent[]>(initialEvents);
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null);
   const [result, setResult] = useState("No paid result yet.");
+  const [isLoadingFallback, setIsLoadingFallback] = useState(false);
   const [prompt] = useState(
     'Use TollGate to call a paid hackathon research agent and ask what the strongest Coinbase x AWS x402 project is.',
   );
@@ -59,6 +60,41 @@ export default function Page() {
 
     setReceipt({ ...localReceipt, status: "verified" });
     setResult(finalAnswer);
+  };
+
+  const runFallbackPayment = async (paymentMode: "mock" | "x402") => {
+    setIsLoadingFallback(true);
+    setResult(`Running ${paymentMode} payment flow...`);
+    try {
+      const res = await fetch("/api/fallback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentMode,
+          question: "What is the strongest Coinbase x AWS x402 hackathon project we can build quickly?",
+        }),
+      });
+      const data = (await res.json()) as {
+        answer?: string;
+        receipt?: PaymentReceipt;
+        events?: TollGateEvent[];
+        error?: string;
+      };
+
+      if (!res.ok || data.error) {
+        setResult(`Fallback flow failed: ${data.error ?? `status ${res.status}`}`);
+        if (data.events) setEvents(data.events);
+        return;
+      }
+
+      if (data.events) setEvents(data.events);
+      if (data.receipt) setReceipt(data.receipt);
+      if (data.answer) setResult(data.answer);
+    } catch (error) {
+      setResult(`Fallback flow failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsLoadingFallback(false);
+    }
   };
 
   useEffect(() => {
@@ -146,6 +182,22 @@ export default function Page() {
       >
         Run Simulated Demo
       </button>
+      <div className="mt-3 flex gap-3">
+        <button
+          disabled={isLoadingFallback}
+          onClick={() => runFallbackPayment("mock")}
+          className="rounded-lg border border-line bg-line/10 px-4 py-2 text-sm font-medium hover:bg-line/20 disabled:opacity-60"
+        >
+          Call Paid Agent
+        </button>
+        <button
+          disabled={isLoadingFallback}
+          onClick={() => runFallbackPayment("x402")}
+          className="rounded-lg border border-glow bg-glow/15 px-4 py-2 text-sm font-medium hover:bg-glow/25 disabled:opacity-60"
+        >
+          Pay with x402 Testnet
+        </button>
+      </div>
     </main>
   );
 }

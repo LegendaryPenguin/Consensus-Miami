@@ -10,12 +10,9 @@ import {
   type PaymentReceipt,
   type TollGateEvent,
 } from "@tollgate/shared";
+import { executePaidAgentFlow } from "@tollgate/shared/buyer-client";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { x402Client, x402HTTPClient } from "@x402/core/client";
-import { decodePaymentRequiredHeader } from "@x402/core/http";
-import { registerExactEvmScheme } from "@x402/evm/exact/client";
-import { privateKeyToAccount } from "viem/accounts";
 
 dotenv.config();
 
@@ -23,7 +20,6 @@ const API_URL = process.env.TOLLGATE_API_URL ?? "http://localhost:4000";
 const DEFAULT_PAYMENT_MODE = (process.env.TOLLGATE_PAYMENT_MODE ?? "mock") as PaymentMode;
 
 let latestReceipt: PaymentReceipt | null = null;
-let cachedX402Buyer: { client: x402HTTPClient; address: string } | null = null;
 
 const server = new McpServer({ name: "tollgate-bazaar", version: "0.1.0" });
 
@@ -59,94 +55,46 @@ server.tool(
       createEvent({ type: "marketplace_lookup", source: "mcp", detail: `Resolved ${agent.name}.` }),
     ];
 
-    const initial = await fetch(agent.endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
-    });
-
-    if (initial.status !== 402) {
+    let paidFlow;
+    try {
+      paidFlow = await executePaidAgentFlow({
+        endpoint: agent.endpoint,
+        question,
+        paymentMode: mode,
+      });
+    } catch (error) {
+      events.push(
+        createEvent({
+          type: "payment_required",
+          source: "api",
+          detail: `402/payment flow failed early: ${error instanceof Error ? error.message : String(error)}`,
+        }),
+      );
+      await postEventsToApi(events);
       return {
-        content: [{ type: "text", text: `Expected 402, got ${initial.status}` }],
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ error: "x402 buyer payment creation failed.", events }, null, 2),
+          },
+        ],
         isError: true,
       };
     }
 
     events.push(createEvent({ type: "payment_required", source: "api", detail: "Seller returned HTTP 402." }));
+    events.push(
+      createEvent({
+        type: "payment_signed",
+        source: "mcp",
+        detail:
+          mode === "x402"
+            ? `Signed x402 payment payload with buyer wallet ${paidFlow.buyerAddress}.`
+            : "Attached mock payment header.",
+      }),
+    );
 
-    let finalResponse: Response;
-    let buyerAddress = "0xMcpBuyer";
-
-    if (mode === "x402") {
-      try {
-        const buyer = getOrCreateX402Buyer();
-        buyerAddress = buyer.address;
-
-        const paymentRequiredHeader =
-          initial.headers.get("PAYMENT-REQUIRED") ??
-          initial.headers.get("payment-required");
-        if (!paymentRequiredHeader) {
-          throw new Error("Missing PAYMENT-REQUIRED header in 402 response.");
-        }
-        const paymentRequired = decodePaymentRequiredHeader(paymentRequiredHeader);
-
-        const paymentPayload = await buyer.client.createPaymentPayload(paymentRequired);
-        const paymentHeaders = buyer.client.encodePaymentSignatureHeader(paymentPayload);
-
-        events.push(
-          createEvent({
-            type: "payment_signed",
-            source: "mcp",
-            detail: `Signed x402 payment payload with buyer wallet ${buyerAddress}.`,
-          }),
-        );
-
-        finalResponse = await fetch(agent.endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...paymentHeaders,
-          },
-          body: JSON.stringify({ question }),
-        });
-      } catch (error) {
-        events.push(
-          createEvent({
-            type: "payment_signed",
-            source: "mcp",
-            detail: `x402 buyer failed to create/sign payment: ${error instanceof Error ? error.message : String(error)}`,
-          }),
-        );
-        await postEventsToApi(events);
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  error: "x402 buyer payment creation failed.",
-                  observed402: true,
-                  events,
-                },
-                null,
-                2,
-              ),
-            },
-          ],
-          isError: true,
-        };
-      }
-    } else {
-      events.push(createEvent({ type: "payment_signed", source: "mcp", detail: "Attached mock payment header." }));
-      finalResponse = await fetch(agent.endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Mock-Payment": "paid",
-        },
-        body: JSON.stringify({ question }),
-      });
-    }
+    const finalResponse = paidFlow.finalResponse;
 
     if (!finalResponse.ok) {
       await postEventsToApi(events);
@@ -166,7 +114,7 @@ server.tool(
         paymentMode: mode,
         network: process.env.X402_NETWORK ?? "eip155:84532",
         priceUsd: agent.priceUsd,
-        buyerAddress,
+        buyerAddress: paidFlow.buyerAddress,
         sellerAddress: process.env.SELLER_WALLET_ADDRESS ?? "0xSeller",
         status: "verified",
       });
@@ -204,32 +152,6 @@ server.tool("tollgate_get_latest_receipt", "Return latest TollGate payment recei
     structuredContent: { receipt: latestReceipt },
   };
 });
-
-function getOrCreateX402Buyer() {
-  if (cachedX402Buyer) return cachedX402Buyer;
-
-  const privateKeyRaw = process.env.BUYER_WALLET_PRIVATE_KEY?.trim();
-  if (!privateKeyRaw) {
-    throw new Error("Missing BUYER_WALLET_PRIVATE_KEY for x402 mode.");
-  }
-
-  const privateKey = privateKeyRaw.startsWith("0x") ? privateKeyRaw : `0x${privateKeyRaw}`;
-  const account = privateKeyToAccount(privateKey as `0x${string}`);
-
-  const network = (process.env.X402_NETWORK ?? "eip155:84532") as `${string}:${string}`;
-  const client = new x402Client();
-  registerExactEvmScheme(client, {
-    signer: account,
-    networks: [network],
-  });
-
-  cachedX402Buyer = {
-    client: new x402HTTPClient(client),
-    address: account.address,
-  };
-
-  return cachedX402Buyer;
-}
 
 async function postEventsToApi(events: TollGateEvent[]) {
   await Promise.all(
