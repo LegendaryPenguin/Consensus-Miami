@@ -63,9 +63,18 @@ importers:
       '@tollgate/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@x402/core':
+        specifier: ^2.11.0
+        version: 2.11.0
+      '@x402/evm':
+        specifier: ^2.11.0
+        version: 2.11.0(typescript@5.9.3)
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
+      viem:
+        specifier: ^2.48.8
+        version: 2.48.8(typescript@5.9.3)(zod@3.25.76)
       zod:
         specifier: ^3.24.1
         version: 3.25.76
