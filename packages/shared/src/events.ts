@@ -1,5 +1,11 @@
-import { randomUUID } from "node:crypto";
-import type { PaymentMode, PaymentReceipt, TollGateEvent, TollGateEventType } from "./types.js";
+import type { PaymentMode, PaymentReceipt, TollGateEvent, TollGateEventType } from "./types";
+
+function makeId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `id_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export function createEvent(input: {
   type: TollGateEventType;
@@ -7,7 +13,7 @@ export function createEvent(input: {
   detail: string;
 }): TollGateEvent {
   return {
-    id: randomUUID(),
+    id: makeId(),
     type: input.type,
     source: input.source,
     detail: input.detail,
@@ -27,7 +33,7 @@ export function createReceipt(input: {
   status?: PaymentReceipt["status"];
 }): PaymentReceipt {
   return {
-    id: randomUUID(),
+    id: makeId(),
     createdAt: new Date().toISOString(),
     status: input.status ?? "pending",
     agentId: input.agentId,

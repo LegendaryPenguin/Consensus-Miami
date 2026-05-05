@@ -1,4 +1,4 @@
-import type { PaidAgent } from "./types.js";
+import type { PaidAgent } from "./types";
 
 const marketplaceRegistry: PaidAgent[] = [
   {
