@@ -60,29 +60,46 @@ server.tool(
 
     events.push(createEvent({ type: "payment_required", source: "api", detail: "Seller returned HTTP 402." }));
 
-    let finalResponse: Response;
-    if (mode === "mock") {
-      events.push(createEvent({ type: "payment_signed", source: "mcp", detail: "Attached mock payment header." }));
-      finalResponse = await fetch(agent.endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Mock-Payment": "paid",
-        },
-        body: JSON.stringify({ question }),
-      });
-    } else {
-      finalResponse = await fetch(agent.endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Mock-Payment": "paid",
-        },
-        body: JSON.stringify({ question }),
-      });
+    if (mode === "x402") {
+      events.push(
+        createEvent({
+          type: "payment_signed",
+          source: "mcp",
+          detail: "Skipped real payment signing: Phase 8 x402 buyer not implemented. Use paymentMode=mock for end-to-end unlock.",
+        }),
+      );
+      await postEventsToApi(events);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                error: "TOLLGATE_PAYMENT_MODE=x402 requires a real x402 buyer (Phase 8). Mock header retry is intentionally disabled.",
+                observed402: true,
+                events,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+        isError: true,
+      };
     }
 
+    events.push(createEvent({ type: "payment_signed", source: "mcp", detail: "Attached mock payment header." }));
+    const finalResponse = await fetch(agent.endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Mock-Payment": "paid",
+      },
+      body: JSON.stringify({ question }),
+    });
+
     if (!finalResponse.ok) {
+      await postEventsToApi(events);
       return {
         content: [{ type: "text", text: `Payment retry failed: ${finalResponse.status}` }],
         isError: true,
@@ -110,15 +127,7 @@ server.tool(
     events.push(createEvent({ type: "access_unlocked", source: "api", detail: "Specialist output unlocked." }));
     events.push(createEvent({ type: "result_returned", source: "mcp", detail: "Returned answer to Cursor." }));
 
-    await Promise.all(
-      events.map((event) =>
-        fetch(`${API_URL}/events`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(event),
-        }).catch(() => undefined),
-      ),
-    );
+    await postEventsToApi(events);
 
     const response: AgentCallResponse = {
       answer: payload.answer,
@@ -139,6 +148,18 @@ server.tool("tollgate_get_latest_receipt", "Return latest TollGate payment recei
     structuredContent: { receipt: latestReceipt },
   };
 });
+
+async function postEventsToApi(events: TollGateEvent[]) {
+  await Promise.all(
+    events.map((event) =>
+      fetch(`${API_URL}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(event),
+      }).catch(() => undefined),
+    ),
+  );
+}
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

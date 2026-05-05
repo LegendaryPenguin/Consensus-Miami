@@ -1,0 +1,12 @@
+﻿HTTP/1.1 402 Payment Required
+X-Powered-By: Express
+Access-Control-Allow-Origin: *
+Content-Type: application/json; charset=utf-8
+PAYMENT-REQUIRED: eyJ4NDAyVmVyc2lvbiI6MiwiZXJyb3IiOiJQYXltZW50IHJlcXVpcmVkIiwicmVzb3VyY2UiOnsidXJsIjoiaHR0cDovL2xvY2FsaG9zdDo0MDI3L2FnZW50cy9oYWNrYXRob24tcmVzZWFyY2giLCJkZXNjcmlwdGlvbiI6IlBhaWQgc3BlY2lhbGlzdCBoYWNrYXRob24gcmVzZWFyY2ggYW5zd2VyLiIsIm1pbWVUeXBlIjoiYXBwbGljYXRpb24vanNvbiJ9LCJhY2NlcHRzIjpbeyJzY2hlbWUiOiJleGFjdCIsIm5ldHdvcmsiOiJlaXAxNTU6ODQ1MzIiLCJhbW91bnQiOiIzMDAwIiwiYXNzZXQiOiIweDAzNkNiRDUzODQyYzU0MjY2MzRlNzkyOTU0MWVDMjMxOGYzZENGN2UiLCJwYXlUbyI6IjB4NDIwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMSIsIm1heFRpbWVvdXRTZWNvbmRzIjozMDAsImV4dHJhIjp7Im5hbWUiOiJVU0RDIiwidmVyc2lvbiI6IjIifX1dfQ==
+Content-Length: 2
+ETag: W/"2-vyGp6PvFo4RvsFtPoIWeCReyIC8"
+Date: Tue, 05 May 2026 21:27:23 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{}

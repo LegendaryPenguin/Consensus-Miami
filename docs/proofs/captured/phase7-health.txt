@@ -1,0 +1,1 @@
+﻿{"ok":true,"paymentMode":"x402","facilitator":"https://x402.org/facilitator"}

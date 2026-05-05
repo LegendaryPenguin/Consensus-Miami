@@ -15,8 +15,28 @@ const PORT = Number(process.env.PORT ?? 4000);
 const PAYMENT_MODE = (process.env.PAYMENT_MODE ?? process.env.TOLLGATE_PAYMENT_MODE ?? "mock") as "mock" | "x402";
 const NETWORK = process.env.X402_NETWORK ?? "eip155:84532";
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator";
-const SELLER_WALLET_ADDRESS = process.env.SELLER_WALLET_ADDRESS ?? "0xSellerWalletPlaceholder";
+const RAW_SELLER = process.env.SELLER_WALLET_ADDRESS?.trim() ?? "";
+const PLACEHOLDER_SELLERS = new Set([
+  "",
+  "0xSellerWalletPlaceholder",
+  "0xYourTestnetSellerWallet",
+  "0xYourTestSellerWallet",
+  "0xYourRealBaseSepoliaSellerAddress",
+]);
+const SELLER_WALLET_ADDRESS =
+  PAYMENT_MODE === "x402"
+    ? RAW_SELLER
+    : RAW_SELLER || "0xSellerWalletPlaceholder";
 const PRICE_USD = process.env.PRICE_USD ?? "0.003";
+
+if (PAYMENT_MODE === "x402") {
+  if (!RAW_SELLER || PLACEHOLDER_SELLERS.has(RAW_SELLER)) {
+    console.error(
+      "[paid-agent-api] PAYMENT_MODE=x402 requires a real testnet SELLER_WALLET_ADDRESS (not a placeholder). Set SELLER_WALLET_ADDRESS in .env and restart.",
+    );
+    process.exit(1);
+  }
+}
 
 const reqSchema = z.object({
   question: z.string().min(3),
