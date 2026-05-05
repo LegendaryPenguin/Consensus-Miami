@@ -1,0 +1,21 @@
+{
+  "name": "tollgate-bazaar",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm run --parallel dev:dashboard dev:api",
+    "dev:dashboard": "pnpm --filter @tollgate/dashboard dev",
+    "dev:api": "pnpm --filter @tollgate/paid-agent-api dev",
+    "dev:mcp": "pnpm --filter @tollgate/mcp-server dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
