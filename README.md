@@ -1,6 +1,6 @@
 # TollGate Bazaar Build Plan Pack
 
-This repository contains a phase-by-phase execution plan and an implemented MVP through Phases 1-7.
+This repository contains a phase-by-phase execution plan and an implemented MVP through Phases 1-10.
 
 Start here:
 
@@ -16,6 +16,13 @@ Quickstart:
 4. `pnpm dev:api`
 5. `pnpm dev:mcp`
 6. `pnpm dev:dashboard`
+
+How TollGate Bazaar differs from MCPay:
+
+- TollGate Bazaar is a marketplace + MCP gateway for paid specialist agents.
+- MCPay is a broader MCP monetization/proxy platform.
+- We reused payment-flow concepts, but implemented an independent architecture in this repo.
+- See `docs/mcpay-reference-notes.md` for exact reuse boundaries.
 
 Execution model:
 
