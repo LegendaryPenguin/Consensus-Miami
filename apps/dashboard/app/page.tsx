@@ -15,43 +15,16 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_TOLLGATE_API_URL ?? "http://localhost
 
 export default function Page() {
   const liveAgentId = "hackathon-research-agent";
-  const marketplaceCards = useMemo(
-    () => [
-      {
-        id: "hackathon-research-agent",
-        name: "Hackathon Research Agent",
-        priceUsd: "0.003",
-        status: "Live",
-        description: "Finds sponsor-aligned hackathon ideas and explains the strongest build path.",
-      },
-      {
-        id: "pitch-agent",
-        name: "Pitch Agent",
-        priceUsd: "0.002",
-        status: "Demo",
-        description: "Turns rough ideas into judge-ready pitch language.",
-      },
-      {
-        id: "code-review-agent",
-        name: "Code Review Agent",
-        priceUsd: "0.005",
-        status: "Demo",
-        description: "Reviews technical architecture and repo quality.",
-      },
-      {
-        id: "wallet-risk-agent",
-        name: "Wallet Risk Agent",
-        priceUsd: "0.004",
-        status: "Demo",
-        description: "Flags buyer wallet/payment risk for agent-to-agent payments.",
-      },
-    ],
-    [],
-  );
   const sharedAgents = useMemo(() => listAgents(), []);
+  const [marketplaceCards, setMarketplaceCards] = useState<
+    Array<{ id: string; name: string; description: string; priceUsd: string; status: "Live" | "Demo" }>
+  >(() => toMarketplaceCards(sharedAgents));
   const liveAgent = useMemo(
-    () => sharedAgents.find((agent) => agent.id === liveAgentId) ?? sharedAgents[0],
-    [sharedAgents],
+    () =>
+      marketplaceCards.find((agent) => agent.id === liveAgentId)
+        ? sharedAgents.find((agent) => agent.id === liveAgentId) ?? sharedAgents[0]
+        : sharedAgents[0],
+    [marketplaceCards, sharedAgents],
   );
   const [events, setEvents] = useState<TollGateEvent[]>(initialEvents);
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null);
@@ -163,6 +136,15 @@ export default function Page() {
           const data = (await healthRes.json()) as { ok: boolean; paymentMode: string };
           setApiHealth(data);
         }
+        const agentsRes = await fetch(`${apiBaseUrl}/agents`);
+        if (agentsRes.ok) {
+          const data = (await agentsRes.json()) as {
+            agents?: Array<{ id: string; name: string; description: string; priceUsd: string }>;
+          };
+          if (data.agents?.length) {
+            setMarketplaceCards(toMarketplaceCards(data.agents));
+          }
+        }
       } catch {
         setEventConnection("disconnected");
       }
@@ -219,7 +201,8 @@ export default function Page() {
     <main className="min-h-screen bg-bg px-6 py-8 text-slate-100">
       <h1 className="mb-2 text-3xl font-semibold">TollGate Bazaar</h1>
       <p className="mb-2 text-sm text-slate-300">Cursor-style agents can buy specialist help on demand with x402.</p>
-      <p className="mb-6 text-xs text-slate-400">{prompt}</p>
+      <p className="text-xs text-slate-400">{prompt}</p>
+      <p className="mb-6 text-xs text-slate-400">Public API URL: {apiBaseUrl}</p>
 
       <div className="grid gap-4 md:grid-cols-2">
         <section className="rounded-xl border border-line/30 bg-panel p-5">
@@ -358,4 +341,23 @@ function hasEvent(events: TollGateEvent[], eventTypes: Array<TollGateEvent["type
 function shortenAddress(address?: string): string | null {
   if (!address || address.length < 10) return null;
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function toMarketplaceCards(
+  apiAgents: Array<{ id: string; name: string; description: string; priceUsd: string }>,
+): Array<{ id: string; name: string; description: string; priceUsd: string; status: "Live" | "Demo" }> {
+  const mapped = apiAgents.map((agent) => ({
+    ...agent,
+    status: (agent.id === "hackathon-research-agent" ? "Live" : "Demo") as "Live" | "Demo",
+  }));
+  if (!mapped.some((agent) => agent.id === "wallet-risk-agent")) {
+    mapped.push({
+      id: "wallet-risk-agent",
+      name: "Wallet Risk Agent",
+      description: "Flags buyer wallet/payment risk for agent-to-agent payments.",
+      priceUsd: "0.004",
+      status: "Demo",
+    });
+  }
+  return mapped;
 }
