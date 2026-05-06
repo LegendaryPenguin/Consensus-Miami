@@ -49,6 +49,7 @@ server.tool(
         isError: true,
       };
     }
+    const resolvedEndpoint = resolveAgentEndpoint(agent.endpoint);
 
     const events: TollGateEvent[] = [
       createEvent({ type: "request_received", source: "mcp", detail: "Cursor invoked tollgate_call_paid_agent." }),
@@ -58,7 +59,7 @@ server.tool(
     let paidFlow;
     try {
       paidFlow = await executePaidAgentFlow({
-        endpoint: agent.endpoint,
+        endpoint: resolvedEndpoint,
         question,
         paymentMode: mode,
       });
@@ -110,7 +111,7 @@ server.tool(
       createReceipt({
         agentId: agent.id,
         agentName: agent.name,
-        endpoint: agent.endpoint,
+        endpoint: resolvedEndpoint,
         paymentMode: mode,
         network: process.env.X402_NETWORK ?? "eip155:84532",
         priceUsd: agent.priceUsd,
@@ -163,6 +164,15 @@ async function postEventsToApi(events: TollGateEvent[]) {
       }).catch(() => undefined),
     ),
   );
+}
+
+function resolveAgentEndpoint(endpoint: string): string {
+  try {
+    const path = new URL(endpoint).pathname;
+    return new URL(path, API_URL).toString();
+  } catch {
+    return endpoint;
+  }
 }
 
 const transport = new StdioServerTransport();
