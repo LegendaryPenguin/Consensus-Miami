@@ -35,6 +35,10 @@ This plan decomposes your full prompt into independent, executable phases so we 
 13. `docs/phases/PHASE-13.md` - Clean product dashboard
 14. `docs/phases/PHASE-14.md` - Demo controls and reliability layer
 15. `docs/phases/PHASE-15.md` - Final demo script and regression sweep
+16. `docs/phases/PHASE-16.md` - Prepare API for public hosting
+17. `docs/phases/PHASE-17.md` - Prepare dashboard for public hosting
+18. `docs/phases/PHASE-18.md` - Add Connect to Cursor page
+19. `docs/phases/PHASE-19.md` - Public-access test from different Cursor project
 
 ## Global Deliverables
 

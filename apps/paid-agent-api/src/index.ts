@@ -8,13 +8,14 @@ import { appendEvent, bootstrapLookupEvent, clearEvents, listEvents } from "./ev
 dotenv.config();
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 const PORT = Number(process.env.PORT ?? 4000);
 const PAYMENT_MODE = (process.env.PAYMENT_MODE ?? process.env.TOLLGATE_PAYMENT_MODE ?? "mock") as "mock" | "x402";
 const NETWORK = process.env.X402_NETWORK ?? "eip155:84532";
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator";
+const PUBLIC_API_URL = process.env.PUBLIC_API_URL?.trim() ?? "";
+const DASHBOARD_ORIGIN = process.env.DASHBOARD_ORIGIN?.trim() ?? "";
 const RAW_SELLER = process.env.SELLER_WALLET_ADDRESS?.trim() ?? "";
 const PLACEHOLDER_SELLERS = new Set([
   "",
@@ -28,6 +29,14 @@ const SELLER_WALLET_ADDRESS =
     ? RAW_SELLER
     : RAW_SELLER || "0xSellerWalletPlaceholder";
 const PRICE_USD = process.env.PRICE_USD ?? "0.003";
+const API_ORIGIN = PUBLIC_API_URL || `http://localhost:${PORT}`;
+
+const corsOrigins = [DASHBOARD_ORIGIN, process.env.NEXT_PUBLIC_TOLLGATE_API_URL?.trim() ?? "", "*"].filter(Boolean);
+app.use(
+  cors({
+    origin: corsOrigins.includes("*") ? true : corsOrigins,
+  }),
+);
 
 if (PAYMENT_MODE === "x402") {
   if (!RAW_SELLER || PLACEHOLDER_SELLERS.has(RAW_SELLER)) {
@@ -45,11 +54,15 @@ const reqSchema = z.object({
 bootstrapLookupEvent();
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, paymentMode: PAYMENT_MODE, facilitator: FACILITATOR_URL });
+  res.json({ ok: true, paymentMode: PAYMENT_MODE, facilitator: FACILITATOR_URL, publicApiUrl: API_ORIGIN });
 });
 
 app.get("/agents", (_req, res) => {
-  res.json({ agents: listAgents() });
+  const agents = listAgents().map((agent) => ({
+    ...agent,
+    endpoint: resolvePublicAgentEndpoint(agent.endpoint),
+  }));
+  res.json({ agents });
 });
 
 app.get("/events", (_req, res) => {
@@ -133,8 +146,17 @@ app.post("/agents/hackathon-research", paymentGuard, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Paid agent API listening on http://localhost:${PORT} (mode=${PAYMENT_MODE})`);
+  console.log(`Paid agent API listening on ${API_ORIGIN} (mode=${PAYMENT_MODE})`);
 });
+
+function resolvePublicAgentEndpoint(endpoint: string): string {
+  try {
+    const path = new URL(endpoint).pathname;
+    return new URL(path, API_ORIGIN).toString();
+  } catch {
+    return endpoint;
+  }
+}
 
 async function buildPaymentGuard() {
   if (PAYMENT_MODE !== "x402") {

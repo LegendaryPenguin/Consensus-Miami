@@ -20,6 +20,10 @@ Use this as the top-level progress tracker. Detailed tasks live in each phase fi
 - [ ] Phase 13 - Dashboard product shell complete (4 sections)
 - [ ] Phase 14 - Demo controls and reliability layer complete
 - [ ] Phase 15 - Final script + regression sweep complete
+- [ ] Phase 16 - Public API hosting prep complete
+- [ ] Phase 17 - Public dashboard hosting prep complete
+- [ ] Phase 18 - Connect to Cursor page complete
+- [ ] Phase 19 - Public access verified from different Cursor project
 
 ## MVP Acceptance
 
@@ -44,3 +48,48 @@ Use this as the top-level progress tracker. Detailed tasks live in each phase fi
 - [ ] `.env` ignored
 - [ ] Testnet-only configuration documented
 - [ ] No private keys logged in terminal/app output
+
+## Public-Access Expansion (Phases 16-19)
+
+### Architecture Guardrails
+
+- [ ] Public API + public dashboard + local MCP pattern documented
+- [ ] Remote MCP is not introduced in this scope
+- [ ] Buyer private key remains local only
+- [ ] No buyer private key is exposed to browser code
+- [ ] Mock mode remains functional
+- [ ] x402 mode remains functional
+
+### Local Regression Must Still Pass
+
+- [ ] `pnpm typecheck`
+- [ ] `pnpm build`
+- [ ] Local API health check works
+- [ ] Local dashboard works
+- [ ] Local MCP flow still works
+
+### Public API Checks
+
+- [ ] `GET https://YOUR_PUBLIC_API_URL/health` returns 200
+- [ ] `GET https://YOUR_PUBLIC_API_URL/agents` returns agents
+- [ ] unpaid `POST /agents/hackathon-research` returns 402
+- [ ] real x402 paid call returns 200 after payment
+
+### Public Dashboard Checks
+
+- [ ] Dashboard loads at public URL
+- [ ] Dashboard reads public API env URL
+- [ ] Marketplace loads from public API
+- [ ] Connect to Cursor page works
+- [ ] Copy buttons work
+- [ ] No private key appears in client/dashboard source
+
+### External Cursor Checks
+
+- [ ] Different Cursor project can see TollGate MCP tools
+- [ ] `tollgate_list_agents` uses public API
+- [ ] `tollgate_call_paid_agent` uses public API
+- [ ] x402 payment succeeds
+- [ ] Cursor receives answer + receipt
+- [ ] Receipt shows `paymentMode=x402` and `network=eip155:84532`
+- [ ] Buyer testnet USDC decreases by 0.003
