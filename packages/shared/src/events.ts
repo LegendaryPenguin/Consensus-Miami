@@ -1,4 +1,4 @@
-import type { PaymentMode, PaymentReceipt, TollGateEvent, TollGateEventType } from "./types";
+import type { PaymentMode, PaymentReceipt, TollGateEvent, TollGateEventType } from "./types.js";
 
 function makeId(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
@@ -31,6 +31,10 @@ export function createReceipt(input: {
   buyerAddress: string;
   sellerAddress: string;
   status?: PaymentReceipt["status"];
+  settlementTxHash?: string;
+  settlementPayer?: string;
+  settlementAmount?: string;
+  settlementNetwork?: string;
 }): PaymentReceipt {
   return {
     id: makeId(),
@@ -44,5 +48,9 @@ export function createReceipt(input: {
     priceUsd: input.priceUsd,
     buyerAddress: input.buyerAddress,
     sellerAddress: input.sellerAddress,
+    settlementTxHash: input.settlementTxHash,
+    settlementPayer: input.settlementPayer,
+    settlementAmount: input.settlementAmount,
+    settlementNetwork: input.settlementNetwork,
   };
 }

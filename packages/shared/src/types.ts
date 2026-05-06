@@ -46,6 +46,10 @@ export type PaymentReceipt = {
   sellerAddress: string;
   paymentMode: PaymentMode;
   createdAt: string;
+  settlementTxHash?: string;
+  settlementPayer?: string;
+  settlementAmount?: string;
+  settlementNetwork?: string;
 };
 
 export type AgentCallRequest = {

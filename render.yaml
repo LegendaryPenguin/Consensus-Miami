@@ -1,0 +1,15 @@
+# Render Blueprint: deploy paid-agent-api as a public web service.
+# Create a new Blueprint in Render, point it at this repo, then set secrets in the dashboard:
+# PAYMENT_MODE, PUBLIC_API_URL, DASHBOARD_ORIGIN, SELLER_WALLET_ADDRESS, X402_* (see docs/public-api-deploy.md).
+services:
+  - type: web
+    name: tollgate-paid-agent-api
+    runtime: docker
+    dockerfilePath: ./apps/paid-agent-api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "4000"
+      - key: NODE_ENV
+        value: production

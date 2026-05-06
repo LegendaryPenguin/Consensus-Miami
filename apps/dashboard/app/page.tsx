@@ -1,7 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createEvent,
   createReceipt,
@@ -9,16 +8,21 @@ import {
   type PaymentReceipt,
   type TollGateEvent,
 } from "@tollgate/shared";
+import { DeveloperDrawer } from "../components/DeveloperDrawer";
+import { MarketplaceGrid, type MarketplaceCard } from "../components/MarketplaceGrid";
+import { PaidResultCard } from "../components/PaidResultCard";
+import { PaymentStepper } from "../components/PaymentStepper";
+import { TopBar } from "../components/TopBar";
+import { TransactionHistory } from "../components/TransactionHistory";
 
 const initialEvents: TollGateEvent[] = [];
 const apiBaseUrl = process.env.NEXT_PUBLIC_TOLLGATE_API_URL ?? "http://localhost:4000";
+const defaultPaymentMode = (process.env.NEXT_PUBLIC_PAYMENT_MODE ?? "mock").toLowerCase();
 
 export default function Page() {
   const liveAgentId = "hackathon-research-agent";
   const sharedAgents = useMemo(() => listAgents(), []);
-  const [marketplaceCards, setMarketplaceCards] = useState<
-    Array<{ id: string; name: string; description: string; priceUsd: string; status: "Live" | "Demo" }>
-  >(() => toMarketplaceCards(sharedAgents));
+  const [marketplaceCards, setMarketplaceCards] = useState<MarketplaceCard[]>(() => toMarketplaceCards(sharedAgents));
   const liveAgent = useMemo(
     () =>
       marketplaceCards.find((agent) => agent.id === liveAgentId)
@@ -33,10 +37,71 @@ export default function Page() {
   const [mode, setMode] = useState<"simulated" | "mock" | "x402">("simulated");
   const [apiHealth, setApiHealth] = useState<{ ok: boolean; paymentMode: string } | null>(null);
   const [eventConnection, setEventConnection] = useState<"connected" | "disconnected">("disconnected");
-  const [mcpStatus] = useState<"unknown" | "detected">("unknown");
   const [copyState, setCopyState] = useState("Copy Cursor Demo Prompt");
   const [selectedAgentId] = useState(liveAgentId);
-  const [prompt] = useState('Use TollGate Bazaar and call the Hackathon Research Agent with x402 payment.');
+  const [prompt] = useState("Use TollGate Bazaar and call the Hackathon Research Agent with x402 payment.");
+  const [devOpen, setDevOpen] = useState(false);
+  const [balanceChip, setBalanceChip] = useState<string | null>(null);
+  const [balanceAddressShort, setBalanceAddressShort] = useState<string | null>(null);
+  const [walletBalancesRaw, setWalletBalancesRaw] = useState("");
+  const [walletBalancesLoading, setWalletBalancesLoading] = useState(false);
+  const [txHistory, setTxHistory] = useState<Array<{ txHash: string; timestamp: string; amountUsdc: string }>>([]);
+  const [txHistoryLoading, setTxHistoryLoading] = useState(true);
+  const [txHistoryError, setTxHistoryError] = useState<string | null>(null);
+
+  const buyerDisplayShort = useMemo(() => {
+    const env = process.env.NEXT_PUBLIC_BUYER_WALLET_ADDRESS?.trim();
+    if (env && /^0x[a-fA-F0-9]{40}$/i.test(env)) return shortenAddress(env) ?? env.slice(0, 10);
+    if (balanceAddressShort) return balanceAddressShort;
+    return shortenAddress(receipt?.buyerAddress) ?? "configure buyer";
+  }, [balanceAddressShort, receipt?.buyerAddress]);
+
+  const refreshBalance = useCallback(async () => {
+    try {
+      const res = await fetch("/api/balance");
+      const data = (await res.json()) as {
+        usdcFormatted?: string | null;
+        addressShort?: string | null;
+      };
+      setBalanceChip(data.usdcFormatted ?? null);
+      setBalanceAddressShort(data.addressShort ?? null);
+    } catch {
+      setBalanceChip(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshBalance();
+    const t = setInterval(() => void refreshBalance(), 15000);
+    return () => clearInterval(t);
+  }, [refreshBalance]);
+
+  const refreshTxHistory = useCallback(async () => {
+    try {
+      setTxHistoryLoading(true);
+      const res = await fetch("/api/transaction-history");
+      const data = (await res.json()) as {
+        transfers?: Array<{ txHash: string; timestamp: string; amountUsdc: string }>;
+        error?: string;
+      };
+      if (!res.ok || data.error) {
+        setTxHistoryError("Transaction history unavailable. Check buyer/seller env vars.");
+        return;
+      }
+      setTxHistory(data.transfers ?? []);
+      setTxHistoryError(null);
+    } catch {
+      setTxHistoryError("Transaction history unavailable.");
+    } finally {
+      setTxHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshTxHistory();
+    const t = setInterval(() => void refreshTxHistory(), 15000);
+    return () => clearInterval(t);
+  }, [refreshTxHistory]);
 
   const runSimulatedDemo = async () => {
     if (!liveAgent) return;
@@ -116,6 +181,35 @@ export default function Page() {
     }
   };
 
+  const runTopBarDemo = () => {
+    if (defaultPaymentMode === "x402") {
+      void runFallbackPayment("x402");
+    } else {
+      void runFallbackPayment("mock");
+    }
+  };
+
+  const loadWalletBalances = async () => {
+    setWalletBalancesLoading(true);
+    try {
+      const res = await fetch("/api/wallet-balances");
+      const data = (await res.json()) as Record<string, unknown>;
+      setWalletBalancesRaw(JSON.stringify(data, null, 2));
+    } catch (error) {
+      setWalletBalancesRaw(
+        JSON.stringify(
+          {
+            error: error instanceof Error ? error.message : String(error),
+          },
+          null,
+          2,
+        ),
+      );
+    } finally {
+      setWalletBalancesLoading(false);
+    }
+  };
+
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -153,25 +247,14 @@ export default function Page() {
     return () => clearInterval(interval);
   }, []);
 
-  const timelineStates = useMemo(
-    () => [
-      { label: "Waiting for Cursor request", active: events.length === 0 },
-      { label: "Cursor Agent connected", active: hasEvent(events, ["cursor_request_received", "marketplace_listed"]) },
-      { label: "Paid agent selected", active: hasEvent(events, ["agent_selected"]) },
-      { label: "402 Payment Required", active: hasEvent(events, ["payment_required_402", "payment_required"]) },
-      { label: "x402 payment submitted", active: hasEvent(events, ["x402_payment_submitted", "payment_signed"]) },
-      { label: "Payment verified", active: hasEvent(events, ["payment_verified"]) },
-      { label: "Access unlocked", active: hasEvent(events, ["access_unlocked"]) },
-      { label: "Result returned to Cursor", active: hasEvent(events, ["result_returned"]) },
-    ],
-    [events],
-  );
+  const buyerLabel = shortenAddress(receipt?.buyerAddress) ?? "Buyer";
+  const sellerLabel = shortenAddress(receipt?.sellerAddress) ?? "Seller";
 
-  const lastAnswer = result;
-  const buyerLabel = shortenAddress(receipt?.buyerAddress) ?? "Cursor Agent";
-  const sellerLabel = shortenAddress(receipt?.sellerAddress) ?? "Hackathon Research Agent";
-  const statusBuyer = shortenAddress(receipt?.buyerAddress ?? "0x3c8B51E023E669aBb27f197537A30E95C058e5b6") ?? "n/a";
-  const statusSeller = shortenAddress(receipt?.sellerAddress ?? "0x4E2BCF514DCB6Fb56751913233404409b5De3818") ?? "n/a";
+  const spentLabel = receipt ? `${receipt.priceUsd} USDC` : null;
+
+  const isPaidComplete =
+    hasEvent(events, ["result_returned"]) ||
+    (receipt?.status === "verified" && !isWaitingResultCopy(result));
 
   const resetDemo = async () => {
     setEvents([]);
@@ -197,148 +280,69 @@ export default function Page() {
     }
   };
 
+  const balanceLabel = balanceChip;
+
   return (
-    <main className="min-h-screen bg-bg px-6 py-8 text-slate-100">
-      <h1 className="mb-2 text-3xl font-semibold">TollGate Bazaar</h1>
-      <p className="mb-2 text-sm text-slate-300">Cursor-style agents can buy specialist help on demand with x402.</p>
-      <p className="text-xs text-slate-400">{prompt}</p>
-      <p className="mb-6 text-xs text-slate-400">Public API URL: {apiBaseUrl}</p>
-      <a href="/connect-to-cursor" className="mb-6 inline-block text-sm text-line underline underline-offset-2">
-        Connect to Cursor setup
-      </a>
+    <main className="min-h-screen bg-bg px-4 py-6 text-slate-100 md:px-8">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <TopBar
+          balanceLabel={balanceLabel}
+          addressShort={buyerDisplayShort}
+          isLoadingDemo={isLoadingFallback}
+          onRunDemo={runTopBarDemo}
+          onOpenDeveloper={() => setDevOpen(true)}
+        />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className="rounded-xl border border-line/30 bg-panel p-5">
-          <h2 className="mb-3 text-lg font-semibold">1. Marketplace</h2>
-          <div className="space-y-2">
-            {marketplaceCards.map((agent) => (
-              <div
-                key={agent.id}
-                className={`rounded-lg border p-3 ${
-                  agent.id === selectedAgentId ? "border-glow/70 bg-glow/10" : "border-slate-700"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium">{agent.name}</p>
-                  <span
-                    className={`rounded px-2 py-0.5 text-xs ${
-                      agent.status === "Live" ? "bg-emerald-600/30 text-emerald-200" : "bg-slate-700 text-slate-200"
-                    }`}
-                  >
-                    {agent.status}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-300">{agent.description}</p>
-                <p className="mt-1 text-xs text-line">${agent.priceUsd} / call</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-line/30 bg-panel p-5">
-          <h2 className="mb-3 text-lg font-semibold">2. Live Transaction Timeline</h2>
-          <div className="space-y-2 rounded-xl border border-slate-700/70 bg-slate-950/40 p-3">
-            {timelineStates.map((state) => (
-              <div
-                key={state.label}
-                className={`rounded-md border px-3 py-2 text-sm ${
-                  state.active ? "border-glow/80 bg-glow/15 text-slate-100" : "border-slate-700 text-slate-400"
-                }`}
-              >
-                {state.label}
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 space-y-2">
-            {events.slice(-6).map((event) => (
-              <motion.div key={event.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-md border border-slate-700 p-2">
-                <p className="text-xs uppercase text-line">{event.type}</p>
-                <p className="text-sm">{event.detail}</p>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-line/30 bg-panel p-5">
-          <h2 className="mb-3 text-lg font-semibold">3. Receipt</h2>
-          {receipt ? (
-            <div className="space-y-1 text-sm">
-              <p>Buyer: Cursor Agent</p>
-              <p>Seller: Hackathon Research Agent</p>
-              <p>Price: {receipt.priceUsd} USDC</p>
-              <p>Network: Base Sepolia</p>
-              <p>Payment Mode: {receipt.paymentMode}</p>
-              <p>Status: {receipt.status}</p>
-              <p>Receipt ID: {receipt.id}</p>
-              <p>Timestamp: {new Date(receipt.createdAt).toLocaleString()}</p>
-              <p>Buyer wallet: {buyerLabel}</p>
-              <p>Seller wallet: {sellerLabel}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">No receipt yet.</p>
-          )}
-        </section>
-
-        <section className="rounded-xl border border-line/30 bg-panel p-5">
-          <h2 className="mb-3 text-lg font-semibold">4. Final Answer</h2>
-          <p className="text-sm">{lastAnswer}</p>
-        </section>
-      </div>
-
-      <div className="mt-6 rounded-xl border border-line/30 bg-panel p-4">
-        <h3 className="mb-2 text-sm font-semibold text-line">Demo Controls & Health</h3>
-        <div className="mb-3 grid gap-2 text-xs text-slate-300 md:grid-cols-3">
-          <p>Mode: <span className="text-slate-100">{mode}</span></p>
-          <p>API status: <span className="text-slate-100">{apiHealth?.ok ? "healthy" : "offline"}</span></p>
-          <p>Payment mode: <span className="text-slate-100">{apiHealth?.paymentMode ?? "unknown"}</span></p>
-          <p>MCP status: <span className="text-slate-100">{mcpStatus}</span></p>
-          <p>Event connection: <span className="text-slate-100">{eventConnection}</span></p>
-          <p>Buyer/Seller: <span className="text-slate-100">{statusBuyer} / {statusSeller}</span></p>
+        <div className="grid gap-6 md:grid-cols-2">
+          <MarketplaceGrid cards={marketplaceCards} selectedId={selectedAgentId} />
+          <PaymentStepper events={events} spentLabel={spentLabel} />
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={resetDemo}
-            className="rounded-lg border border-slate-500 bg-slate-800/40 px-4 py-2 text-sm font-medium hover:bg-slate-700/50"
-          >
-            Reset Demo
-          </button>
-          <button
-            onClick={copyPrompt}
-            className="rounded-lg border border-line bg-line/10 px-4 py-2 text-sm font-medium hover:bg-line/20"
-          >
-            {copyState}
-          </button>
-        </div>
+
+        <PaidResultCard
+          answer={result}
+          receipt={receipt}
+          buyerShort={buyerLabel}
+          sellerShort={sellerLabel}
+          isComplete={isPaidComplete}
+        />
+        <TransactionHistory items={txHistory} loading={txHistoryLoading} error={txHistoryError} />
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-3">
-        <button
-          onClick={runSimulatedDemo}
-          className="rounded-lg border border-line bg-line/10 px-4 py-2 text-sm font-medium hover:bg-line/20"
-        >
-          Run Simulated Demo
-        </button>
-        <button
-          disabled={isLoadingFallback}
-          onClick={() => runFallbackPayment("mock")}
-          className="rounded-lg border border-line bg-line/10 px-4 py-2 text-sm font-medium hover:bg-line/20 disabled:opacity-60"
-        >
-          Run Mock Demo
-        </button>
-        <button
-          disabled={isLoadingFallback}
-          onClick={() => runFallbackPayment("x402")}
-          className="rounded-lg border border-glow bg-glow/15 px-4 py-2 text-sm font-medium hover:bg-glow/25 disabled:opacity-60"
-        >
-          Run Real x402 Demo
-        </button>
-      </div>
+      <DeveloperDrawer
+        open={devOpen}
+        onClose={() => setDevOpen(false)}
+        apiBaseUrl={apiBaseUrl}
+        events={events}
+        apiHealth={apiHealth}
+        eventConnection={eventConnection}
+        mode={mode}
+        copyState={copyState}
+        isLoadingFallback={isLoadingFallback}
+        onReset={() => void resetDemo()}
+        onCopyPrompt={() => void copyPrompt()}
+        onRunSimulated={() => void runSimulatedDemo()}
+        onRunMock={() => void runFallbackPayment("mock")}
+        onRunX402={() => void runFallbackPayment("x402")}
+        onLoadWalletBalances={() => void loadWalletBalances()}
+        receipt={receipt}
+        walletBalancesRaw={walletBalancesRaw}
+        walletBalancesLoading={walletBalancesLoading}
+      />
     </main>
   );
 }
 
 function hasEvent(events: TollGateEvent[], eventTypes: Array<TollGateEvent["type"]>): boolean {
   return events.some((event) => eventTypes.includes(event.type));
+}
+
+function isWaitingResultCopy(message: string) {
+  return (
+    message === "No paid result yet." ||
+    message.startsWith("Running ") ||
+    message.startsWith("Fallback flow failed") ||
+    message.startsWith("Awaiting paid specialist")
+  );
 }
 
 function shortenAddress(address?: string): string | null {
@@ -348,7 +352,7 @@ function shortenAddress(address?: string): string | null {
 
 function toMarketplaceCards(
   apiAgents: Array<{ id: string; name: string; description: string; priceUsd: string }>,
-): Array<{ id: string; name: string; description: string; priceUsd: string; status: "Live" | "Demo" }> {
+): MarketplaceCard[] {
   const mapped = apiAgents.map((agent) => ({
     ...agent,
     status: (agent.id === "hackathon-research-agent" ? "Live" : "Demo") as "Live" | "Demo",

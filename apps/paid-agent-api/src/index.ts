@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import { z } from "zod";
+import { privateKeyToAccount } from "viem/accounts";
 import { createReceipt, getAgentById, listAgents, type TollGateEventType } from "@tollgate/shared";
 import { appendEvent, bootstrapLookupEvent, clearEvents, listEvents } from "./events.js";
 
@@ -29,6 +30,7 @@ const SELLER_WALLET_ADDRESS =
     ? RAW_SELLER
     : RAW_SELLER || "0xSellerWalletPlaceholder";
 const PRICE_USD = process.env.PRICE_USD ?? "0.003";
+const BUYER_ADDRESS = deriveBuyerAddress(process.env.BUYER_WALLET_PRIVATE_KEY);
 const API_ORIGIN = PUBLIC_API_URL || `http://localhost:${PORT}`;
 
 const corsOrigins = [DASHBOARD_ORIGIN, process.env.NEXT_PUBLIC_TOLLGATE_API_URL?.trim() ?? "", "*"].filter(Boolean);
@@ -131,7 +133,7 @@ app.post("/agents/hackathon-research", paymentGuard, (req, res) => {
     paymentMode: PAYMENT_MODE,
     network: NETWORK,
     priceUsd: PRICE_USD,
-    buyerAddress: PAYMENT_MODE === "mock" ? "0xMockBuyer" : "0xX402Buyer",
+    buyerAddress: PAYMENT_MODE === "mock" ? "0xMockBuyer" : BUYER_ADDRESS,
     sellerAddress: SELLER_WALLET_ADDRESS,
     status: "verified",
   });
@@ -191,4 +193,14 @@ async function buildPaymentGuard() {
   );
 
   return middleware as express.RequestHandler;
+}
+
+function deriveBuyerAddress(privateKeyRaw: string | undefined): string {
+  if (!privateKeyRaw) return "0xBuyerWalletMissing";
+  try {
+    const normalized = privateKeyRaw.startsWith("0x") ? privateKeyRaw : `0x${privateKeyRaw}`;
+    return privateKeyToAccount(normalized as `0x${string}`).address;
+  } catch {
+    return "0xBuyerWalletInvalid";
+  }
 }

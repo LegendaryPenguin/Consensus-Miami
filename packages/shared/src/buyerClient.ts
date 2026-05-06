@@ -1,8 +1,8 @@
 import { x402Client, x402HTTPClient } from "@x402/core/client";
-import { decodePaymentRequiredHeader } from "@x402/core/http";
+import { decodePaymentRequiredHeader, decodePaymentResponseHeader } from "@x402/core/http";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { privateKeyToAccount } from "viem/accounts";
-import type { PaymentMode } from "./types";
+import type { PaymentMode } from "./types.js";
 
 type BuyerState = {
   client: x402HTTPClient;
@@ -23,6 +23,12 @@ type PaidFlowResult = {
   finalResponse: Response;
   buyerAddress: string;
   paymentRequiredHeader: string;
+  settlement?: {
+    transaction: string;
+    payer?: string;
+    amount?: string;
+    network?: string;
+  };
 };
 
 const buyerCache = new Map<string, BuyerState>();
@@ -54,6 +60,7 @@ export async function executePaidAgentFlow(input: PaidFlowInput): Promise<PaidFl
       finalResponse,
       buyerAddress: "0xMockBuyer",
       paymentRequiredHeader: getPaymentRequiredHeader(initial),
+      settlement: undefined,
     };
   }
 
@@ -79,6 +86,7 @@ export async function executePaidAgentFlow(input: PaidFlowInput): Promise<PaidFl
     },
     body: JSON.stringify({ question: input.question }),
   });
+  const settlement = getPaymentSettlement(finalResponse);
 
   return {
     initialStatus: initial.status,
@@ -86,6 +94,7 @@ export async function executePaidAgentFlow(input: PaidFlowInput): Promise<PaidFl
     finalResponse,
     buyerAddress: buyer.address,
     paymentRequiredHeader,
+    settlement,
   };
 }
 
@@ -118,4 +127,20 @@ function getOrCreateX402Buyer(privateKeyRaw: string | undefined, network: `${str
 
 function getPaymentRequiredHeader(response: Response): string {
   return response.headers.get("PAYMENT-REQUIRED") ?? response.headers.get("payment-required") ?? "";
+}
+
+function getPaymentSettlement(response: Response): PaidFlowResult["settlement"] {
+  const encoded = response.headers.get("PAYMENT-RESPONSE") ?? response.headers.get("X-PAYMENT-RESPONSE");
+  if (!encoded) return undefined;
+  try {
+    const decoded = decodePaymentResponseHeader(encoded);
+    return {
+      transaction: decoded.transaction,
+      payer: decoded.payer,
+      amount: decoded.amount,
+      network: decoded.network,
+    };
+  } catch {
+    return undefined;
+  }
 }

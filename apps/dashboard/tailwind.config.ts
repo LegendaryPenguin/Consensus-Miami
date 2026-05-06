@@ -9,12 +9,18 @@ const config: Config = {
     extend: {
       colors: {
         bg: "#05070f",
-        panel: "#0d1224",
-        line: "#2ee6ff",
+        surface: "#0b1020",
+        panel: "#0f1629",
+        border: "rgba(148, 163, 184, 0.18)",
+        line: "#38bdf8",
         glow: "#5f7cff",
+        accent: "#22d3ee",
+        success: "#34d399",
+        warning: "#fbbf24",
       },
       boxShadow: {
-        glow: "0 0 35px rgba(95, 124, 255, 0.35)",
+        glow: "0 0 24px rgba(56, 189, 248, 0.22)",
+        card: "0 8px 30px rgba(0, 0, 0, 0.35)",
       },
     },
   },

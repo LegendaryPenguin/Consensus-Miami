@@ -4,11 +4,19 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./buyer-client": "./src/buyerClient.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./buyer-client": {
+      "types": "./dist/buyerClient.d.ts",
+      "import": "./dist/buyerClient.js",
+      "default": "./dist/buyerClient.js"
+    }
   },
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"

@@ -2,6 +2,9 @@ import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { createPublicClient, formatUnits, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
 import { createEvent, createReceipt, getAgentById } from "@tollgate/shared";
 import { executePaidAgentFlow } from "@tollgate/shared/buyer-client";
 
@@ -23,6 +26,17 @@ type Body = {
   paymentMode?: "mock" | "x402";
 };
 
+const USDC_BASE_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as const;
+const erc20BalanceAbi = [
+  {
+    inputs: [{ name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Body;
   const paymentMode = body.paymentMode ?? "mock";
@@ -42,6 +56,9 @@ export async function POST(request: Request) {
     createEvent({ type: "agent_selected", source: "dashboard", detail: `Resolved ${agent.name}.` }),
     createEvent({ type: "unpaid_request_sent", source: "dashboard", detail: "Sending unpaid request to paid endpoint." }),
   ];
+  const buyerAddress = getBuyerAddressFromPrivateKey();
+  const shouldCaptureBalance = paymentMode === "x402" && Boolean(process.env.BASE_SEPOLIA_RPC_URL && buyerAddress);
+  const buyerUsdcBalanceBefore = shouldCaptureBalance ? await readUsdcBalance(buyerAddress as `0x${string}`) : null;
 
   try {
     const paid = await executePaidAgentFlow({
@@ -75,6 +92,10 @@ export async function POST(request: Request) {
     }
 
     const payload = (await paid.finalResponse.json()) as { answer: string; receipt?: ReturnType<typeof createReceipt> };
+    if (paid.settlement?.transaction && shouldCaptureBalance) {
+      await waitForTransactionReceipt(paid.settlement.transaction);
+    }
+    const buyerUsdcBalanceAfter = shouldCaptureBalance ? await readUsdcBalance(buyerAddress as `0x${string}`) : null;
     const receipt =
       payload.receipt ??
       createReceipt({
@@ -87,7 +108,17 @@ export async function POST(request: Request) {
         buyerAddress: paid.buyerAddress,
         sellerAddress: process.env.SELLER_WALLET_ADDRESS ?? "0xSeller",
         status: "verified",
+        settlementTxHash: paid.settlement?.transaction,
+        settlementPayer: paid.settlement?.payer,
+        settlementAmount: paid.settlement?.amount,
+        settlementNetwork: paid.settlement?.network,
       });
+    if (payload.receipt && paid.settlement?.transaction) {
+      receipt.settlementTxHash = paid.settlement.transaction;
+      receipt.settlementPayer = paid.settlement.payer;
+      receipt.settlementAmount = paid.settlement.amount;
+      receipt.settlementNetwork = paid.settlement.network;
+    }
 
     events.push(createEvent({ type: "payment_verified", source: "api", detail: "x402 Payment Verified by paid-agent-api." }));
     events.push(createEvent({ type: "access_unlocked", source: "api", detail: "Specialist output unlocked." }));
@@ -101,6 +132,8 @@ export async function POST(request: Request) {
       initialStatus: paid.initialStatus,
       finalStatus: paid.finalStatus,
       paymentRequiredHeaderPresent: Boolean(paid.paymentRequiredHeader),
+      buyerUsdcBalanceBefore,
+      buyerUsdcBalanceAfter,
     });
   } catch (error) {
     return NextResponse.json(
@@ -110,6 +143,52 @@ export async function POST(request: Request) {
       },
       { status: 500 },
     );
+  }
+}
+
+function getBuyerAddressFromPrivateKey(): string | null {
+  const privateKeyRaw = process.env.BUYER_WALLET_PRIVATE_KEY?.trim();
+  if (!privateKeyRaw) return null;
+  try {
+    const normalized = privateKeyRaw.startsWith("0x") ? privateKeyRaw : `0x${privateKeyRaw}`;
+    return privateKeyToAccount(normalized as `0x${string}`).address;
+  } catch {
+    return null;
+  }
+}
+
+async function readUsdcBalance(address: `0x${string}`): Promise<string | null> {
+  try {
+    const rpc = process.env.BASE_SEPOLIA_RPC_URL?.trim();
+    if (!rpc) return null;
+    const client = createPublicClient({
+      chain: baseSepolia,
+      transport: http(rpc),
+    });
+    const balance = await client.readContract({
+      address: USDC_BASE_SEPOLIA,
+      abi: erc20BalanceAbi,
+      functionName: "balanceOf",
+      args: [address],
+    });
+    return formatUnits(balance, 6);
+  } catch {
+    return null;
+  }
+}
+
+async function waitForTransactionReceipt(txHash: string): Promise<void> {
+  if (!/^0x[a-fA-F0-9]{64}$/.test(txHash)) return;
+  const rpc = process.env.BASE_SEPOLIA_RPC_URL?.trim();
+  if (!rpc) return;
+  const client = createPublicClient({
+    chain: baseSepolia,
+    transport: http(rpc),
+  });
+  try {
+    await client.waitForTransactionReceipt({ hash: txHash as `0x${string}`, timeout: 20_000 });
+  } catch {
+    // best effort only
   }
 }
 
