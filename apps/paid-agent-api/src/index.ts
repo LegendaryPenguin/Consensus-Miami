@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import { z } from "zod";
 import { createReceipt, getAgentById, listAgents, type TollGateEventType } from "@tollgate/shared";
-import { appendEvent, bootstrapLookupEvent, listEvents } from "./events.js";
+import { appendEvent, bootstrapLookupEvent, clearEvents, listEvents } from "./events.js";
 
 dotenv.config();
 
@@ -54,6 +54,17 @@ app.get("/agents", (_req, res) => {
 
 app.get("/events", (_req, res) => {
   res.json({ events: listEvents() });
+});
+
+app.post("/demo/reset", (req, res) => {
+  const confirmed = req.query.confirm === "1" || req.body?.confirm === true;
+  if (!confirmed) {
+    return res.status(400).json({ ok: false, error: "Reset requires confirm=1 or { confirm: true }" });
+  }
+  clearEvents();
+  bootstrapLookupEvent();
+  appendEvent("result_returned", "Demo state reset requested.");
+  return res.json({ ok: true, events: listEvents() });
 });
 
 app.post("/events", (req, res) => {

@@ -57,6 +57,11 @@ export default function Page() {
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null);
   const [result, setResult] = useState("No paid result yet.");
   const [isLoadingFallback, setIsLoadingFallback] = useState(false);
+  const [mode, setMode] = useState<"simulated" | "mock" | "x402">("simulated");
+  const [apiHealth, setApiHealth] = useState<{ ok: boolean; paymentMode: string } | null>(null);
+  const [eventConnection, setEventConnection] = useState<"connected" | "disconnected">("disconnected");
+  const [mcpStatus] = useState<"unknown" | "detected">("unknown");
+  const [copyState, setCopyState] = useState("Copy Cursor Demo Prompt");
   const [selectedAgentId] = useState(liveAgentId);
   const [prompt] = useState('Use TollGate Bazaar and call the Hackathon Research Agent with x402 payment.');
 
@@ -75,6 +80,7 @@ export default function Page() {
     });
 
     setReceipt(localReceipt);
+    setMode("simulated");
     setResult("Awaiting paid specialist response in simulated mode...");
 
     const steps: TollGateEvent[] = [
@@ -102,6 +108,7 @@ export default function Page() {
   };
 
   const runFallbackPayment = async (paymentMode: "mock" | "x402") => {
+    setMode(paymentMode);
     setIsLoadingFallback(true);
     setResult(`Running ${paymentMode} payment flow...`);
     try {
@@ -139,14 +146,25 @@ export default function Page() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${apiBaseUrl}/events`);
-        if (!res.ok) return;
-        const data = (await res.json()) as { events?: TollGateEvent[] };
-        if (data.events && data.events.length > 0) {
-          setEvents(data.events);
+        const [eventsRes, healthRes] = await Promise.all([
+          fetch(`${apiBaseUrl}/events`),
+          fetch(`${apiBaseUrl}/health`),
+        ]);
+        if (eventsRes.ok) {
+          const data = (await eventsRes.json()) as { events?: TollGateEvent[] };
+          if (data.events && data.events.length > 0) {
+            setEvents(data.events);
+          }
+          setEventConnection("connected");
+        } else {
+          setEventConnection("disconnected");
+        }
+        if (healthRes.ok) {
+          const data = (await healthRes.json()) as { ok: boolean; paymentMode: string };
+          setApiHealth(data);
         }
       } catch {
-        // Keep dashboard standalone when API isn't running.
+        setEventConnection("disconnected");
       }
     }, 2000);
 
@@ -170,6 +188,32 @@ export default function Page() {
   const lastAnswer = result;
   const buyerLabel = shortenAddress(receipt?.buyerAddress) ?? "Cursor Agent";
   const sellerLabel = shortenAddress(receipt?.sellerAddress) ?? "Hackathon Research Agent";
+  const statusBuyer = shortenAddress(receipt?.buyerAddress ?? "0x3c8B51E023E669aBb27f197537A30E95C058e5b6") ?? "n/a";
+  const statusSeller = shortenAddress(receipt?.sellerAddress ?? "0x4E2BCF514DCB6Fb56751913233404409b5De3818") ?? "n/a";
+
+  const resetDemo = async () => {
+    setEvents([]);
+    setReceipt(null);
+    setResult("No paid result yet.");
+    try {
+      await fetch(`${apiBaseUrl}/demo/reset?confirm=1`, { method: "POST" });
+    } catch {
+      // keep local reset even when API is unavailable
+    }
+  };
+
+  const copyPrompt = async () => {
+    try {
+      const response = await fetch("/api/demo-prompt");
+      const data = (await response.json()) as { prompt?: string };
+      await navigator.clipboard.writeText(data.prompt ?? prompt);
+      setCopyState("Prompt copied");
+      setTimeout(() => setCopyState("Copy Cursor Demo Prompt"), 1200);
+    } catch {
+      setCopyState("Copy failed");
+      setTimeout(() => setCopyState("Copy Cursor Demo Prompt"), 1200);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-bg px-6 py-8 text-slate-100">
@@ -255,7 +299,33 @@ export default function Page() {
         </section>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-6 rounded-xl border border-line/30 bg-panel p-4">
+        <h3 className="mb-2 text-sm font-semibold text-line">Demo Controls & Health</h3>
+        <div className="mb-3 grid gap-2 text-xs text-slate-300 md:grid-cols-3">
+          <p>Mode: <span className="text-slate-100">{mode}</span></p>
+          <p>API status: <span className="text-slate-100">{apiHealth?.ok ? "healthy" : "offline"}</span></p>
+          <p>Payment mode: <span className="text-slate-100">{apiHealth?.paymentMode ?? "unknown"}</span></p>
+          <p>MCP status: <span className="text-slate-100">{mcpStatus}</span></p>
+          <p>Event connection: <span className="text-slate-100">{eventConnection}</span></p>
+          <p>Buyer/Seller: <span className="text-slate-100">{statusBuyer} / {statusSeller}</span></p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={resetDemo}
+            className="rounded-lg border border-slate-500 bg-slate-800/40 px-4 py-2 text-sm font-medium hover:bg-slate-700/50"
+          >
+            Reset Demo
+          </button>
+          <button
+            onClick={copyPrompt}
+            className="rounded-lg border border-line bg-line/10 px-4 py-2 text-sm font-medium hover:bg-line/20"
+          >
+            {copyState}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
         <button
           onClick={runSimulatedDemo}
           className="rounded-lg border border-line bg-line/10 px-4 py-2 text-sm font-medium hover:bg-line/20"
@@ -267,14 +337,14 @@ export default function Page() {
           onClick={() => runFallbackPayment("mock")}
           className="rounded-lg border border-line bg-line/10 px-4 py-2 text-sm font-medium hover:bg-line/20 disabled:opacity-60"
         >
-          Call Paid Agent
+          Run Mock Demo
         </button>
         <button
           disabled={isLoadingFallback}
           onClick={() => runFallbackPayment("x402")}
           className="rounded-lg border border-glow bg-glow/15 px-4 py-2 text-sm font-medium hover:bg-glow/25 disabled:opacity-60"
         >
-          Pay with x402 Testnet
+          Run Real x402 Demo
         </button>
       </div>
     </main>
