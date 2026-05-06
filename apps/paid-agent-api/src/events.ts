@@ -20,5 +20,5 @@ export function clearEvents() {
 }
 
 export function bootstrapLookupEvent() {
-  appendEvent("marketplace_lookup", `Registry currently has ${listAgents().length} agents.`);
+  appendEvent("marketplace_listed", `Registry currently has ${listAgents().length} agents.`);
 }

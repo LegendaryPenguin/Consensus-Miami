@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import { z } from "zod";
-import { createReceipt, getAgentById, listAgents } from "@tollgate/shared";
+import { createReceipt, getAgentById, listAgents, type TollGateEventType } from "@tollgate/shared";
 import { appendEvent, bootstrapLookupEvent, listEvents } from "./events.js";
 
 dotenv.config();
@@ -58,16 +58,16 @@ app.get("/events", (_req, res) => {
 
 app.post("/events", (req, res) => {
   const detail = typeof req.body?.detail === "string" ? req.body.detail : "External event received";
-  const type = typeof req.body?.type === "string" ? req.body.type : "request_received";
+  const type = typeof req.body?.type === "string" ? (req.body.type as TollGateEventType) : "request_received";
   const source = req.body?.source === "mcp" ? "mcp" : req.body?.source === "dashboard" ? "dashboard" : "api";
-  const event = appendEvent(type as any, detail, source);
+  const event = appendEvent(type, detail, source);
   res.status(201).json({ event });
 });
 
 const paymentGuard = await buildPaymentGuard();
 
 app.post("/agents/hackathon-research", paymentGuard, (req, res) => {
-  appendEvent("request_received", "Paid agent request received.");
+  appendEvent("unpaid_request_sent", "Paid agent request received.");
 
   const parsed = reqSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -83,7 +83,7 @@ app.post("/agents/hackathon-research", paymentGuard, (req, res) => {
     const mockPaidHeader = req.header("X-Mock-Payment");
 
     if (mockPaidHeader !== "paid") {
-      appendEvent("payment_required", "Mock mode returned 402 payment requirement.");
+      appendEvent("payment_required_402", "Mock mode returned 402 payment requirement.");
       return res.status(402).json({
         agentId: agent.id,
         price: PRICE_USD,
@@ -113,6 +113,7 @@ app.post("/agents/hackathon-research", paymentGuard, (req, res) => {
   });
 
   appendEvent("result_returned", "Returned paid specialist answer.");
+  appendEvent("receipt_created", "Payment receipt created for paid call.");
   return res.json({
     answer:
       "Strongest project: Agent Commerce Command Center using x402 pay-per-call specialist agents, with Coinbase payment rails and AWS-hosted orchestration.",

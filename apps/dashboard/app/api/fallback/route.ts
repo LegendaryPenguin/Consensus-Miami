@@ -28,27 +28,29 @@ export async function POST(request: Request) {
   const paymentMode = body.paymentMode ?? "mock";
   const question = body.question ?? "What is the strongest Coinbase x AWS x402 project?";
   const agent = getAgentById("hackathon-research-agent");
+  const apiBaseUrl = process.env.TOLLGATE_PAID_API_URL ?? process.env.TOLLGATE_API_URL ?? "http://localhost:4000";
 
   if (!agent) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
   const events = [
-    createEvent({ type: "request_received", source: "dashboard", detail: "Dashboard fallback invoked paid agent flow." }),
-    createEvent({ type: "marketplace_lookup", source: "dashboard", detail: `Resolved ${agent.name}.` }),
+    createEvent({ type: "cursor_request_received", source: "dashboard", detail: "Dashboard fallback invoked paid agent flow." }),
+    createEvent({ type: "agent_selected", source: "dashboard", detail: `Resolved ${agent.name}.` }),
+    createEvent({ type: "unpaid_request_sent", source: "dashboard", detail: "Sending unpaid request to paid endpoint." }),
   ];
 
   try {
     const paid = await executePaidAgentFlow({
-      endpoint: agent.endpoint,
+      endpoint: resolveAgentEndpoint(agent.endpoint, apiBaseUrl),
       question,
       paymentMode,
     });
 
-    events.push(createEvent({ type: "payment_required", source: "api", detail: "Seller returned HTTP 402." }));
+    events.push(createEvent({ type: "payment_required_402", source: "api", detail: "Seller returned HTTP 402 Payment Required." }));
     events.push(
       createEvent({
-        type: "payment_signed",
+        type: paymentMode === "x402" ? "x402_payment_submitted" : "payment_signed",
         source: "dashboard",
         detail:
           paymentMode === "x402"
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
       createReceipt({
         agentId: agent.id,
         agentName: agent.name,
-        endpoint: agent.endpoint,
+        endpoint: resolveAgentEndpoint(agent.endpoint, apiBaseUrl),
         paymentMode,
         network: process.env.X402_NETWORK ?? "eip155:84532",
         priceUsd: agent.priceUsd,
@@ -84,9 +86,10 @@ export async function POST(request: Request) {
         status: "verified",
       });
 
-    events.push(createEvent({ type: "payment_verified", source: "api", detail: "Payment verified by paid-agent-api." }));
+    events.push(createEvent({ type: "payment_verified", source: "api", detail: "x402 Payment Verified by paid-agent-api." }));
     events.push(createEvent({ type: "access_unlocked", source: "api", detail: "Specialist output unlocked." }));
     events.push(createEvent({ type: "result_returned", source: "dashboard", detail: "Dashboard received paid answer." }));
+    events.push(createEvent({ type: "receipt_created", source: "api", detail: `Receipt created (${receipt.id}).` }));
 
     return NextResponse.json({
       answer: payload.answer,
@@ -104,5 +107,14 @@ export async function POST(request: Request) {
       },
       { status: 500 },
     );
+  }
+}
+
+function resolveAgentEndpoint(endpoint: string, apiBaseUrl: string): string {
+  try {
+    const path = new URL(endpoint).pathname;
+    return new URL(path, apiBaseUrl).toString();
+  } catch {
+    return endpoint;
   }
 }

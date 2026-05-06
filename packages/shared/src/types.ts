@@ -10,6 +10,13 @@ export type PaidAgent = {
 };
 
 export type TollGateEventType =
+  | "cursor_request_received"
+  | "marketplace_listed"
+  | "agent_selected"
+  | "unpaid_request_sent"
+  | "payment_required_402"
+  | "x402_payment_submitted"
+  | "receipt_created"
   | "request_received"
   | "marketplace_lookup"
   | "payment_required"

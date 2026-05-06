@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "phase12:smoke": "tsx scripts/phase12-x402-smoke.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",

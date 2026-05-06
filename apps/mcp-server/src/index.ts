@@ -25,9 +25,14 @@ const server = new McpServer({ name: "tollgate-bazaar", version: "0.1.0" });
 
 server.tool("tollgate_list_agents", "List paid specialist agents in the TollGate marketplace.", {}, async () => {
   const agents = listAgents();
+  const events: TollGateEvent[] = [
+    createEvent({ type: "cursor_request_received", source: "mcp", detail: "Cursor requested marketplace listing." }),
+    createEvent({ type: "marketplace_listed", source: "mcp", detail: `Listed ${agents.length} paid agents.` }),
+  ];
+  await postEventsToApi(events);
   return {
     content: [{ type: "text", text: JSON.stringify({ agents }, null, 2) }],
-    structuredContent: { agents },
+    structuredContent: { agents, events },
   };
 });
 
@@ -52,8 +57,9 @@ server.tool(
     const resolvedEndpoint = resolveAgentEndpoint(agent.endpoint);
 
     const events: TollGateEvent[] = [
-      createEvent({ type: "request_received", source: "mcp", detail: "Cursor invoked tollgate_call_paid_agent." }),
-      createEvent({ type: "marketplace_lookup", source: "mcp", detail: `Resolved ${agent.name}.` }),
+      createEvent({ type: "cursor_request_received", source: "mcp", detail: "Cursor invoked tollgate_call_paid_agent." }),
+      createEvent({ type: "agent_selected", source: "mcp", detail: `Selected ${agent.name}.` }),
+      createEvent({ type: "unpaid_request_sent", source: "mcp", detail: "Sent unpaid request to paid agent endpoint." }),
     ];
 
     let paidFlow;
@@ -66,7 +72,7 @@ server.tool(
     } catch (error) {
       events.push(
         createEvent({
-          type: "payment_required",
+          type: "payment_required_402",
           source: "api",
           detail: `402/payment flow failed early: ${error instanceof Error ? error.message : String(error)}`,
         }),
@@ -83,10 +89,10 @@ server.tool(
       };
     }
 
-    events.push(createEvent({ type: "payment_required", source: "api", detail: "Seller returned HTTP 402." }));
+    events.push(createEvent({ type: "payment_required_402", source: "api", detail: "Seller returned HTTP 402 Payment Required." }));
     events.push(
       createEvent({
-        type: "payment_signed",
+        type: mode === "x402" ? "x402_payment_submitted" : "payment_signed",
         source: "mcp",
         detail:
           mode === "x402"
@@ -121,6 +127,7 @@ server.tool(
       });
 
     latestReceipt = receipt;
+    events.push(createEvent({ type: "receipt_created", source: "api", detail: `Receipt created (${receipt.id}).` }));
 
     events.push(
       createEvent({
