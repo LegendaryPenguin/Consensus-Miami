@@ -16,6 +16,10 @@ Use this as the top-level progress tracker. Detailed tasks live in each phase fi
 - [ ] Phase 9 - Dashboard fallback payment complete
 - [ ] Phase 10 - MCPay reference notes complete
 - [ ] Phase 11 - Demo polish complete
+- [ ] Phase 12 - One real x402 flow is stable (5/5 runs)
+- [ ] Phase 13 - Dashboard product shell complete (4 sections)
+- [ ] Phase 14 - Demo controls and reliability layer complete
+- [ ] Phase 15 - Final script + regression sweep complete
 
 ## MVP Acceptance
 
@@ -30,6 +34,7 @@ Use this as the top-level progress tracker. Detailed tasks live in each phase fi
 - [ ] Cursor -> TollGate MCP -> paid agent -> real x402 testnet 402 -> payment -> verified -> result
 - [ ] Dashboard visualizes transaction live
 - [ ] Fallback dashboard payment button path works
+- [ ] One real x402 flow passes 5 consecutive runs
 
 ## Safety and Security
 
@@ -38,3 +43,4 @@ Use this as the top-level progress tracker. Detailed tasks live in each phase fi
 - [ ] `.env.example` present
 - [ ] `.env` ignored
 - [ ] Testnet-only configuration documented
+- [ ] No private keys logged in terminal/app output

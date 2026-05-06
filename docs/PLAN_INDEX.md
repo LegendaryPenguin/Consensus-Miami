@@ -31,6 +31,10 @@ This plan decomposes your full prompt into independent, executable phases so we 
 9. `docs/phases/PHASE-09.md` - Optional dashboard fallback payment
 10. `docs/phases/PHASE-10.md` - MCPay reference reuse notes
 11. `docs/phases/PHASE-11.md` - Demo polish and final packaging
+12. `docs/phases/PHASE-12.md` - Bulletproof one real flow
+13. `docs/phases/PHASE-13.md` - Clean product dashboard
+14. `docs/phases/PHASE-14.md` - Demo controls and reliability layer
+15. `docs/phases/PHASE-15.md` - Final demo script and regression sweep
 
 ## Global Deliverables
 

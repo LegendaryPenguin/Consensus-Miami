@@ -28,7 +28,10 @@ export async function POST(request: Request) {
   const paymentMode = body.paymentMode ?? "mock";
   const question = body.question ?? "What is the strongest Coinbase x AWS x402 project?";
   const agent = getAgentById("hackathon-research-agent");
-  const apiBaseUrl = process.env.TOLLGATE_PAID_API_URL ?? process.env.TOLLGATE_API_URL ?? "http://localhost:4000";
+  const apiBaseUrl =
+    paymentMode === "mock"
+      ? process.env.TOLLGATE_MOCK_API_URL ?? "http://localhost:4000"
+      : process.env.TOLLGATE_PAID_API_URL ?? process.env.TOLLGATE_API_URL ?? "http://localhost:4000";
 
   if (!agent) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
