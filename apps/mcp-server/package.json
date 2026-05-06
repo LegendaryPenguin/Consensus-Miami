@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "phase12:smoke": "tsx scripts/phase12-x402-smoke.mts"
+    "phase12:smoke": "tsx scripts/phase12-x402-smoke.mts",
+    "phase19:public-check": "tsx scripts/phase19-public-access-check.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",

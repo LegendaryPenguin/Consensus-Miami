@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "pnpm run --parallel dev:dashboard dev:api",
+    "dev": "pnpm --filter @tollgate/dashboard --filter @tollgate/paid-agent-api run --parallel dev",
     "dev:dashboard": "pnpm --filter @tollgate/dashboard dev",
     "dev:api": "pnpm --filter @tollgate/paid-agent-api dev",
     "dev:mcp": "pnpm --filter @tollgate/mcp-server dev",
@@ -11,7 +11,8 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
-    "phase12:smoke": "pnpm --filter @tollgate/mcp-server phase12:smoke"
+    "phase12:smoke": "pnpm --filter @tollgate/mcp-server phase12:smoke",
+    "phase19:public-check": "pnpm --filter @tollgate/mcp-server phase19:public-check"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
