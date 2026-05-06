@@ -63,6 +63,7 @@ Use the stable prompt in [docs/demo-prompt.md](docs/demo-prompt.md).
 ## Documentation
 
 - Cursor setup: [docs/cursor-setup.md](docs/cursor-setup.md)
+- Connect to Cursor onboarding: [docs/connect-to-cursor.md](docs/connect-to-cursor.md)
 - Final script: [docs/final-demo-script.md](docs/final-demo-script.md)
 - Demo checklist: [docs/demo-checklist.md](docs/demo-checklist.md)
 - Troubleshooting: [docs/troubleshooting.md](docs/troubleshooting.md)

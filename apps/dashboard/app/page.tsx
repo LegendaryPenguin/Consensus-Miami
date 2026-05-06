@@ -203,6 +203,9 @@ export default function Page() {
       <p className="mb-2 text-sm text-slate-300">Cursor-style agents can buy specialist help on demand with x402.</p>
       <p className="text-xs text-slate-400">{prompt}</p>
       <p className="mb-6 text-xs text-slate-400">Public API URL: {apiBaseUrl}</p>
+      <a href="/connect-to-cursor" className="mb-6 inline-block text-sm text-line underline underline-offset-2">
+        Connect to Cursor setup
+      </a>
 
       <div className="grid gap-4 md:grid-cols-2">
         <section className="rounded-xl border border-line/30 bg-panel p-5">
