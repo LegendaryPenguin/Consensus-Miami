@@ -1,4 +1,12 @@
-# HandOff
+<img width="1918" height="981" alt="image" src="https://github.com/user-attachments/assets/964d7bae-da3a-4995-87d5-f94ddd461e58" /># HandOff
+
+Video Link: https://www.wevideo.com/view/4087965775
+Tweet: https://x.com/nisch_rawal/status/2052330624803877323
+<img width="1918" height="983" alt="Screenshot 2026-05-07 104808" src="https://github.com/user-attachments/assets/48f8ff02-ce81-4b12-a6b5-13800b007b20" />
+<img width="1918" height="983" alt="Screenshot 2026-05-07 104802" src="https://github.com/user-attachments/assets/dba4bad2-aa7f-4259-8a51-3336d63cdb3f" />
+
+<img width="1918" height="981" alt="Screenshot 2026-05-07 104819" src="https://github.com/user-attachments/assets/33ff1d05-f4a1-4fb7-9c9d-5d0002b015c9" />
+
 
 **AI agents are powerful, but they still need specialists.**
 
