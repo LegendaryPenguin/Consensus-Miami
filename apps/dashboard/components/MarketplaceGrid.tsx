@@ -1,14 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { FlaskConical, Mic2, Search, Shield } from "lucide-react";
+import { FlaskConical, Mic2, Search, Shield, Sparkles } from "lucide-react";
 
 export type MarketplaceCard = {
   id: string;
   name: string;
   description: string;
   priceUsd: string;
-  status: "Live" | "Demo";
+  real?: boolean;
 };
 
 const iconFor = (id: string) => {
@@ -20,61 +19,77 @@ const iconFor = (id: string) => {
     case "code-review-agent":
       return FlaskConical;
     case "wallet-risk-agent":
-    default:
       return Shield;
+    default:
+      return Sparkles;
   }
 };
+
+/** One short tag for the card (not a debug dump). */
+function categoryTag(agent: MarketplaceCard): string {
+  if (agent.real === true) return "Live";
+  if (agent.id.includes("risk")) return "Risk";
+  if (agent.id.includes("pitch")) return "Pitch";
+  if (agent.id.includes("code")) return "Code";
+  if (agent.id.includes("hackathon")) return "Research";
+  return "Agent";
+}
 
 type MarketplaceGridProps = {
   cards: MarketplaceCard[];
   selectedId: string;
+  onSelect?: (id: string) => void;
+  paymentInFlight?: boolean;
 };
 
-export function MarketplaceGrid({ cards, selectedId }: MarketplaceGridProps) {
+export function MarketplaceGrid({ cards, selectedId, onSelect, paymentInFlight }: MarketplaceGridProps) {
   return (
-    <section className="rounded-2xl border border-border bg-panel/70 p-5 shadow-card">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Agent Marketplace</h2>
-      <div className="mt-4 space-y-3">
-        {cards.map((agent, index) => {
+    <section className="rounded-panel border border-hairline bg-surface p-5 shadow-card">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Agent marketplace</span>
+        <h2 className="text-base font-semibold tracking-tight text-ink">Choose a paid specialist</h2>
+        <p className="mt-1 text-xs text-muted">
+          Tap an agent card to pay via x402 from your IDE.
+        </p>
+      </div>
+      <div className="mt-4 space-y-2">
+        {cards.map((agent) => {
           const Icon = iconFor(agent.id);
           const active = agent.id === selectedId;
+          const tag = categoryTag(agent);
           return (
-            <motion.div
+            <button
               key={agent.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.04 }}
-              className={`rounded-2xl border p-4 transition ${
+              type="button"
+              onClick={() => onSelect?.(agent.id)}
+              className={`w-full rounded-panel border p-3.5 text-left transition-all ${
                 active
-                  ? "border-accent/35 bg-gradient-to-br from-accent/10 to-surface/90 shadow-glow"
-                  : "border-border bg-surface/60 hover:border-slate-500/40"
-              }`}
+                  ? "border-accent/50 bg-raised shadow-card ring-1 ring-accent/20"
+                  : "border-hairline bg-canvas hover:border-hairlineStrong hover:bg-mutedSurface"
+              } ${paymentInFlight && active ? "shadow-[0_12px_36px_rgba(37,99,235,0.35)]" : ""}`}
             >
               <div className="flex gap-3">
-                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/25 to-glow/20 text-accent">
-                  <Icon className="h-5 w-5" strokeWidth={1.75} />
+                <div
+                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-panel border ${
+                    active ? "border-accent/30 bg-surface text-accent" : "border-hairline bg-surface text-muted"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="truncate font-medium text-slate-100">{agent.name}</p>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
-                        agent.status === "Live"
-                          ? "bg-success/15 text-success"
-                          : "bg-slate-700/60 text-slate-300"
-                      }`}
-                    >
-                      {agent.status}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate font-medium text-ink">{agent.name}</p>
+                    <span className="shrink-0 rounded border border-hairline bg-raised px-1.5 py-0.5 text-[10px] text-muted">
+                      {tag}
                     </span>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs text-slate-400">{agent.description}</p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    <span className="font-medium text-slate-300">${agent.priceUsd}</span> / call ·{" "}
-                    {agent.id === "hackathon-research-agent" ? "Research · x402 · MCP-ready" : "Demo"}
+                  <p className="mt-2 text-sm font-medium text-ink">
+                    ${agent.priceUsd}
+                    <span className="font-normal text-muted"> USDC</span>
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </button>
           );
         })}
       </div>

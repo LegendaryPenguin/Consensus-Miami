@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AppNav } from "../../components/AppNav";
 
-const demoPrompt = `Use TollGate Bazaar.
+const samplePrompt = `Use TollGate Bazaar.
 
 List the available paid agents.
 Choose the Hackathon Research Agent.
@@ -28,8 +29,7 @@ export default function ConnectToCursorPage() {
               env: {
                 TOLLGATE_PAYMENT_MODE: "x402",
                 TOLLGATE_API_URL: publicApiUrl,
-                BUYER_EVM_PRIVATE_KEY: "0x_YOUR_TESTNET_ONLY_PRIVATE_KEY",
-                BUYER_WALLET_ADDRESS: "0x_YOUR_BUYER_ADDRESS",
+                BUYER_WALLET_PRIVATE_KEY: "0x_YOUR_TESTNET_ONLY_PRIVATE_KEY",
                 X402_NETWORK: "eip155:84532",
                 X402_FACILITATOR_URL: "https://x402.org/facilitator",
                 X402_VERSION: "2",
@@ -54,73 +54,83 @@ export default function ConnectToCursorPage() {
     }
   };
 
+  const btn =
+    "rounded-lg border border-hairline bg-raised px-3 py-2 text-sm text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas";
+
   return (
-    <main className="min-h-screen bg-bg px-6 py-8 text-slate-100">
-      <h1 className="text-3xl font-semibold">Connect to Cursor</h1>
-      <p className="mt-2 text-sm text-slate-300">
-        TollGate Bazaar uses a local MCP server in Cursor that points to a public TollGate API.
+    <main className="min-h-screen bg-canvas text-ink">
+      <AppNav current="connect" networkLabel="Base Sepolia" />
+      <div className="px-6 py-8">
+      <h1 className="text-3xl font-semibold tracking-tight">IDE setup (Cursor &amp; Kiro)</h1>
+      <p className="mt-2 max-w-2xl text-sm text-muted">
+        TollGate Bazaar is driven by the same local MCP server in any IDE that supports Model Context Protocol over stdio
+        (Cursor, Kiro, and others). The MCP process calls your public TollGate API; payments and signing use env vars on
+        your machine, not the browser.
       </p>
-      <p className="mt-1 text-sm text-slate-300">
-        Buyer private keys stay local in Cursor config and are never entered in browser forms.
+      <p className="mt-2 max-w-2xl text-sm text-muted">
+        Buyer keys stay in local MCP config or a local <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs">.env</code>{" "}
+        loaded by the server — never paste private keys into dashboard forms.
       </p>
 
-      <section className="mt-6 rounded-xl border border-line/30 bg-panel p-4">
+      <section className="mt-6 rounded-panel border border-hairline bg-surface p-4 shadow-card">
         <h2 className="text-lg font-semibold">Public API URL</h2>
-        <p className="mt-2 text-sm">{publicApiUrl}</p>
-        <button
-          onClick={() => copy(publicApiUrl, "Public API URL")}
-          className="mt-3 rounded-lg border border-line bg-line/10 px-3 py-2 text-sm hover:bg-line/20"
-        >
-          Copy Public API URL
+        <p className="mt-2 font-mono text-sm text-muted">{publicApiUrl}</p>
+        <button type="button" onClick={() => void copy(publicApiUrl, "Public API URL")} className={`mt-3 ${btn}`}>
+          Copy public API URL
         </button>
       </section>
 
-      <section className="mt-4 rounded-xl border border-line/30 bg-panel p-4">
-        <h2 className="text-lg font-semibold">Cursor MCP Config Template</h2>
-        <pre className="mt-2 overflow-x-auto rounded-md border border-slate-700 bg-slate-950/50 p-3 text-xs">{mcpConfig}</pre>
-        <button
-          onClick={() => copy(mcpConfig, "MCP config")}
-          className="mt-3 rounded-lg border border-line bg-line/10 px-3 py-2 text-sm hover:bg-line/20"
-        >
-          Copy MCP Config
+      <section className="mt-4 rounded-panel border border-hairline bg-surface p-4 shadow-card">
+        <h2 className="text-lg font-semibold">MCP config template</h2>
+        <p className="mt-2 text-sm text-muted">
+          Point <code className="font-mono text-xs">args</code> at your built{" "}
+          <code className="font-mono text-xs">apps/mcp-server/dist/index.js</code>. Match{" "}
+          <code className="font-mono text-xs">TOLLGATE_API_URL</code> to the URL your agents reach (local or deployed).
+        </p>
+        <pre className="mt-3 overflow-x-auto rounded-md border border-hairline bg-canvas p-3 font-mono text-xs text-muted">
+          {mcpConfig}
+        </pre>
+        <button type="button" onClick={() => void copy(mcpConfig, "MCP config")} className={`mt-3 ${btn}`}>
+          Copy MCP config
         </button>
       </section>
 
-      <section className="mt-4 rounded-xl border border-amber-500/30 bg-panel p-4">
-        <h2 className="text-lg font-semibold text-amber-200">Safety warning</h2>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-200">
-          <li>Use a fresh testnet-only buyer wallet.</li>
-          <li>Never use your main wallet.</li>
-          <li>Never paste private keys into browser forms.</li>
-          <li>Only place private keys in local Cursor MCP config or local `.env`.</li>
+      <section className="mt-4 rounded-panel border border-warning/35 bg-surface p-4 shadow-card">
+        <h2 className="text-lg font-semibold text-warning">Safety</h2>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink">
+          <li>Use a dedicated Base Sepolia test wallet.</li>
+          <li>Never use mainnet funds or production keys.</li>
+          <li>Keep <code className="font-mono text-xs">BUYER_WALLET_PRIVATE_KEY</code> out of git and chat logs.</li>
         </ul>
       </section>
 
-      <section className="mt-4 rounded-xl border border-line/30 bg-panel p-4">
+      <section className="mt-4 rounded-panel border border-hairline bg-surface p-4 shadow-card">
         <h2 className="text-lg font-semibold">Setup checklist</h2>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-200">
-          <li>Clone repo</li>
-          <li>`pnpm install`</li>
-          <li>`pnpm build`</li>
-          <li>Add MCP config to Cursor</li>
-          <li>Restart Cursor</li>
-          <li>Run the demo prompt</li>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink">
+          <li>Clone the repo and run <code className="font-mono text-xs">pnpm install</code></li>
+          <li>
+            Build MCP: <code className="font-mono text-xs">pnpm --filter @tollgate/mcp-server build</code> (or repo-wide{" "}
+            <code className="font-mono text-xs">pnpm build</code>)
+          </li>
+          <li>Add the MCP server block to your IDE&apos;s MCP settings</li>
+          <li>Restart the IDE so the new server is picked up</li>
+          <li>Run the sample prompt against your configured API</li>
         </ul>
       </section>
 
-      <section className="mt-4 rounded-xl border border-line/30 bg-panel p-4">
-        <h2 className="text-lg font-semibold">Demo prompt</h2>
-        <pre className="mt-2 whitespace-pre-wrap rounded-md border border-slate-700 bg-slate-950/50 p-3 text-xs">{demoPrompt}</pre>
-        <button
-          onClick={() => copy(demoPrompt, "Demo prompt")}
-          className="mt-3 rounded-lg border border-line bg-line/10 px-3 py-2 text-sm hover:bg-line/20"
-        >
-          Copy Demo Prompt
+      <section className="mt-4 rounded-panel border border-hairline bg-surface p-4 shadow-card">
+        <h2 className="text-lg font-semibold">Sample prompt</h2>
+        <pre className="mt-3 whitespace-pre-wrap rounded-md border border-hairline bg-canvas p-3 font-mono text-xs text-muted">
+          {samplePrompt}
+        </pre>
+        <button type="button" onClick={() => void copy(samplePrompt, "Sample prompt")} className={`mt-3 ${btn}`}>
+          Copy sample prompt
         </button>
       </section>
 
-      <p className="mt-6 text-xs text-slate-400">Future convenience command (planned): `npx tollgate-bazaar-mcp`</p>
-      {copied ? <p className="mt-2 text-sm text-line">{copied}</p> : null}
+      <p className="mt-6 text-xs text-muted">Planned convenience: <code className="font-mono">npx tollgate-bazaar-mcp</code></p>
+      {copied ? <p className="mt-2 text-sm text-accent">{copied}</p> : null}
+      </div>
     </main>
   );
 }

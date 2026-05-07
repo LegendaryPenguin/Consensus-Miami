@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1044.0",
     "@tollgate/shared": "workspace:*",
     "@x402/core": "^2.11.0",
     "@x402/evm": "^2.11.0",

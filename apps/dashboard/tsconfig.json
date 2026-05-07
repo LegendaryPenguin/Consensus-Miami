@@ -19,6 +19,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@tollgate/shared": [
+        "../../packages/shared/dist/index.js"
+      ],
+      "@tollgate/shared/*": [
+        "../../packages/shared/dist/*"
       ]
     },
     "allowJs": true

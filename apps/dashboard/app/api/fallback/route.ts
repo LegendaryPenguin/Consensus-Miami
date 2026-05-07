@@ -5,8 +5,7 @@ import { NextResponse } from "next/server";
 import { createPublicClient, formatUnits, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
-import { createEvent, createReceipt, getAgentById } from "@tollgate/shared";
-import { executePaidAgentFlow } from "@tollgate/shared/buyer-client";
+import { createEvent, createReceipt, executePaidAgentFlow, getAgentById } from "@tollgate/shared";
 
 const envCandidates = [
   process.env.TOLLGATE_ENV_FILE,

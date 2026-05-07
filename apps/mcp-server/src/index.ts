@@ -3,9 +3,9 @@ import { z } from "zod";
 import {
   createReceipt,
   createEvent,
-  getAgentById,
   listAgents,
   type AgentCallResponse,
+  type PaidAgent,
   type PaymentMode,
   type PaymentReceipt,
   type TollGateEvent,
@@ -21,10 +21,34 @@ const DEFAULT_PAYMENT_MODE = (process.env.TOLLGATE_PAYMENT_MODE ?? "mock") as Pa
 
 let latestReceipt: PaymentReceipt | null = null;
 
+let agentsCache: { agents: PaidAgent[]; fetchedAt: number } | null = null;
+const AGENTS_CACHE_MS = 10_000;
+
+async function fetchAgentsFromApi(): Promise<PaidAgent[]> {
+  if (agentsCache && Date.now() - agentsCache.fetchedAt < AGENTS_CACHE_MS) {
+    return agentsCache.agents;
+  }
+  try {
+    const res = await fetch(`${API_URL}/agents`, { signal: AbortSignal.timeout(12_000) });
+    if (!res.ok) throw new Error(String(res.status));
+    const data = (await res.json()) as { agents?: PaidAgent[] };
+    const agents = Array.isArray(data.agents) ? data.agents : [];
+    agentsCache = { agents, fetchedAt: Date.now() };
+    return agents;
+  } catch {
+    return listAgents();
+  }
+}
+
+async function resolveAgentForCall(agentId: string): Promise<PaidAgent | undefined> {
+  const agents = await fetchAgentsFromApi();
+  return agents.find((a) => a.id === agentId);
+}
+
 const server = new McpServer({ name: "tollgate-bazaar", version: "0.1.0" });
 
 server.tool("tollgate_list_agents", "List paid specialist agents in the TollGate marketplace.", {}, async () => {
-  const agents = listAgents();
+  const agents = await fetchAgentsFromApi();
   const events: TollGateEvent[] = [
     createEvent({ type: "cursor_request_received", source: "mcp", detail: "Cursor requested marketplace listing." }),
     createEvent({ type: "marketplace_listed", source: "mcp", detail: `Listed ${agents.length} paid agents.` }),
@@ -46,7 +70,7 @@ server.tool(
   },
   async ({ agentId, question, paymentMode }) => {
     const mode = paymentMode ?? DEFAULT_PAYMENT_MODE;
-    const agent = getAgentById(agentId);
+    const agent = await resolveAgentForCall(agentId);
 
     if (!agent) {
       return {

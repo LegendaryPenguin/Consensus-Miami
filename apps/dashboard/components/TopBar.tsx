@@ -5,49 +5,78 @@ import Link from "next/link";
 type TopBarProps = {
   balanceLabel: string | null;
   addressShort: string;
-  isLoadingDemo: boolean;
-  onRunDemo: () => void;
-  onOpenDeveloper: () => void;
+  networkLabel: string;
+  paymentModeLabel: string | null;
+  apiOk: boolean | null;
+  onOpenTools: () => void;
+  sellerHref?: string;
 };
 
-export function TopBar({ balanceLabel, addressShort, isLoadingDemo, onRunDemo, onOpenDeveloper }: TopBarProps) {
+export function TopBar({
+  balanceLabel,
+  addressShort,
+  networkLabel,
+  paymentModeLabel,
+  apiOk,
+  onOpenTools,
+  sellerHref = "/seller",
+}: TopBarProps) {
+  const mode = paymentModeLabel?.toLowerCase() === "x402" ? "x402" : paymentModeLabel?.toLowerCase() === "mock" ? "mock" : "—";
+
   return (
-    <header className="flex flex-col gap-4 rounded-2xl border border-border bg-panel/80 px-5 py-4 shadow-card backdrop-blur-sm md:flex-row md:items-center md:justify-between">
+    <header className="flex flex-col gap-4 rounded-panel border border-hairline bg-surface px-5 py-5 shadow-card md:flex-row md:items-center md:justify-between">
       <div className="min-w-0">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-50 md:text-2xl">TollGate Bazaar</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight text-ink md:text-2xl">TollGate Bazaar</h1>
           {balanceLabel ? (
-            <span className="rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-slate-200">
+            <span className="rounded-full border border-hairline bg-raised px-2.5 py-1 text-xs font-medium text-ink">
               {balanceLabel}
             </span>
           ) : null}
+          <span className="rounded-full border border-hairline bg-raised px-2.5 py-1 text-xs font-medium text-muted">
+            {networkLabel}
+          </span>
+          <span
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+              mode === "x402"
+                ? "border-accent/30 bg-accent/10 text-accent"
+                : "border-hairline bg-raised text-muted"
+            }`}
+          >
+            {mode}
+          </span>
+          {apiOk !== null ? (
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                apiOk ? "border-success/35 bg-success/10 text-success" : "border-danger/35 bg-danger/10 text-danger"
+              }`}
+              title="Paid API reachability"
+            >
+              {apiOk ? "Online" : "Offline"}
+            </span>
+          ) : null}
         </div>
-        <p className="mt-1 text-sm text-slate-400">Paid tools for Cursor agents.</p>
-        <p className="mt-0.5 text-xs text-slate-500">
-          Base Sepolia · x402 · {addressShort}
-        </p>
+        <p className="mt-1 font-mono text-[11px] text-muted">Buyer · {addressShort}</p>
       </div>
       <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
         <Link
-          href="/connect-to-cursor"
-          className="rounded-xl border border-border bg-surface/90 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-accent/40 hover:bg-surface"
+          href={sellerHref}
+          className="rounded border border-hairline bg-raised px-3 py-2 text-sm font-medium text-ink transition-colors hover:border-hairlineStrong hover:bg-mutedSurface"
         >
-          Connect to Cursor
+          Seller
+        </Link>
+        <Link
+          href="/connect-to-cursor"
+          className="rounded border border-hairline bg-raised px-3 py-2 text-sm font-medium text-ink transition-colors hover:border-hairlineStrong hover:bg-mutedSurface"
+        >
+          IDE setup
         </Link>
         <button
           type="button"
-          disabled={isLoadingDemo}
-          onClick={onRunDemo}
-          className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent/20 disabled:opacity-50"
+          onClick={onOpenTools}
+          className="rounded border border-accent bg-accent px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accentPress focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          {isLoadingDemo ? "Running…" : "Run Demo"}
-        </button>
-        <button
-          type="button"
-          onClick={onOpenDeveloper}
-          className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
-        >
-          Dev
+          Tools
         </button>
       </div>
     </header>

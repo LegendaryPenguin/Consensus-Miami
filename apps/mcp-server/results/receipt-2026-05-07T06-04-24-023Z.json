@@ -1,0 +1,28 @@
+{
+  "id": "362cfedf-2255-4f55-b372-ecf79183e0e4",
+  "createdAt": "2026-05-07T06:04:15.827Z",
+  "status": "verified",
+  "agentId": "hackathon-research-agent",
+  "agentName": "Hackathon Research Agent",
+  "endpoint": "http://localhost:4000/agents/hackathon-research",
+  "paymentMode": "x402",
+  "network": "eip155:84532",
+  "priceUsd": "0.003",
+  "buyerAddress": "0x3c8B51E023E669aBb27f197537A30E95C058e5b6",
+  "sellerAddress": "0x4E2BCF514DCB6Fb56751913233404409b5De3818",
+  "settlement": {
+    "success": true,
+    "payer": "0x3c8B51E023E669aBb27f197537A30E95C058e5b6",
+    "transaction": "0xd14f41f87bf8dae806e657634fdf7a8e0822e550575abc23bc67fa56252147b3",
+    "network": "eip155:84532"
+  },
+  "paymentProof": {
+    "buyerAddress": "0x3c8B51E023E669aBb27f197537A30E95C058e5b6",
+    "sellerAddress": "0x4E2BCF514DCB6Fb56751913233404409b5De3818",
+    "paymentMode": "x402",
+    "network": "eip155:84532",
+    "settlementTxHash": "0xd14f41f87bf8dae806e657634fdf7a8e0822e550575abc23bc67fa56252147b3",
+    "realPaidCall": true,
+    "mockCall": false
+  }
+}
