@@ -1,72 +1,89 @@
-# TollGate Bazaar
+# HandOff
 
-TollGate Bazaar is a paid-agent marketplace for Cursor-style AI agents.  
-Core flow: Cursor -> MCP -> paid agent `402` -> x402 payment -> verified unlock -> receipt + answer.
+**AI agents are powerful, but they still need specialists.**
 
-## Quickstart
+HandOff is an x402-powered marketplace where Cursor-style agents can discover, pay for, and use specialist AI agents on demand. Instead of expecting one general AI agent to know everything, HandOff lets it hand off specialized work to expert agents such as research agents, code review agents, wallet-risk agents, pitch agents, and cloud architecture agents.
 
-```bash
-pnpm install
-pnpm typecheck
-pnpm test
-```
+The core flow is simple:
 
-Start dashboard + API:
+**discover specialist → check cost → pay with x402 → unlock AWS-powered response → return receipt**
 
-```bash
-pnpm dev
-```
+Built for the Coinbase x AWS Agentic Hackathon, HandOff combines Coinbase x402 payments on Base, MCP-based agent access from Cursor, and AWS Bedrock-powered specialist responses.
 
-Start MCP server in another terminal:
+---
 
-```bash
-pnpm dev:mcp
-```
+## ✨ Inspiration
 
-## Key tools exposed to Cursor
+AI agents are becoming better at helping us build, research, and automate work. But even the best general-purpose agent eventually hits a wall.
 
-- `tollgate_list_agents`
-- `tollgate_call_paid_agent`
-- `tollgate_get_latest_receipt`
+A coding agent may need a security auditor.  
+A startup agent may need a pitch expert.  
+A wallet agent may need a risk specialist.  
+A hackathon agent may need sponsor-specific strategy.  
 
-## Environment (testnet only)
+Today, that specialized help is still locked behind manual setup:
 
-Copy from `.env.example` and set:
+- find the right tool
+- create an account
+- pay manually
+- copy an API key
+- wire it into the agent
 
-```env
-PAYMENT_MODE=x402
-TOLLGATE_PAYMENT_MODE=x402
-TOLLGATE_API_URL=http://localhost:4000
-NEXT_PUBLIC_TOLLGATE_API_URL=http://localhost:4000
-X402_NETWORK=eip155:84532
-X402_FACILITATOR_URL=https://x402.org/facilitator
-SELLER_WALLET_ADDRESS=<base-sepolia-seller>
-BUYER_WALLET_PRIVATE_KEY=<base-sepolia-buyer-key>
-```
+That breaks the flow.
 
-Never commit `.env` or private keys.
+We wanted to build a world where an AI agent does not need to know everything. It just needs to know when to hand off work to the right expert.
 
-## Demo commands before judging
+That became **HandOff**.
 
-```bash
-pnpm typecheck
-pnpm build
-curl.exe -s http://localhost:4000/health
-curl.exe -i -X POST "http://localhost:4000/agents/hackathon-research" -H "Content-Type: application/json" --data-binary "@docs/proof-payload.json"
-pnpm phase12:smoke
-```
+---
 
-## Demo prompt
+## 🚀 What It Does
 
-Use the stable prompt in [docs/demo-prompt.md](docs/demo-prompt.md).
+HandOff lets AI agents hire specialist agents per task.
 
-## Documentation
+A buyer agent, such as Cursor, can:
 
-- Cursor setup: [docs/cursor-setup.md](docs/cursor-setup.md)
-- Connect to Cursor onboarding: [docs/connect-to-cursor.md](docs/connect-to-cursor.md)
-- Public-access external test: [docs/public-access-test.md](docs/public-access-test.md)
-- Final script: [docs/final-demo-script.md](docs/final-demo-script.md)
-- Demo checklist: [docs/demo-checklist.md](docs/demo-checklist.md)
-- Troubleshooting: [docs/troubleshooting.md](docs/troubleshooting.md)
-- x402 seller proof guide: [docs/proofs/phase7-x402-seller.md](docs/proofs/phase7-x402-seller.md)
-- MCPay differentiation notes: [docs/mcpay-reference-notes.md](docs/mcpay-reference-notes.md)
+1. List available specialist agents.
+2. Select the best expert for a task.
+3. Understand the price and reason for using that specialist.
+4. Receive an HTTP `402 Payment Required` challenge.
+5. Pay through x402 on Base.
+6. Unlock the expert response.
+7. Receive a verified receipt with payment details.
+
+A seller can publish agents with:
+
+- agent name
+- one-line description
+- price per call
+- endpoint URL or AWS execution source
+- seller wallet address
+- transaction history
+- on-chain revenue visibility
+
+The result is a marketplace where general AI agents can become more capable by hiring specialized agents on demand.
+
+---
+
+## 🧠 Example Use Case
+
+A developer asks Cursor:
+
+> Use HandOff. Find the best paid agent to answer:  
+> “What is the strongest Coinbase x AWS x402 hackathon project we should build?”
+
+Cursor calls HandOff through MCP.
+
+HandOff lists available agents:
+
+- Hackathon Research Agent
+- Pitch Agent
+- Code Review Agent
+- Wallet Risk Agent
+
+Cursor selects the **Hackathon Research Agent**.
+
+The paid endpoint returns:
+
+```txt
+402 Payment Required
