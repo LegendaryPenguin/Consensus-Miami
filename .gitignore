@@ -11,3 +11,5 @@ coverage
 .vercel
 apps/paid-agent-api/data/agents.json
 apps/paid-agent-api/data/transactions.json
+apps/mcp-server/results/*.md
+apps/mcp-server/results/*.json

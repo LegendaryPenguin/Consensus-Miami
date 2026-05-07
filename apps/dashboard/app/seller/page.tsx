@@ -142,8 +142,9 @@ export default function SellerPage() {
     await loadAgents();
   };
 
-  const sellerWalletShort = agents[0]?.sellerWalletAddress
-    ? `${agents[0].sellerWalletAddress.slice(0, 6)}…${agents[0].sellerWalletAddress.slice(-4)}`
+  const sellerWalletResolved = sellerBalanceAddress || agents[0]?.sellerWalletAddress || null;
+  const sellerWalletShort = sellerWalletResolved
+    ? `${sellerWalletResolved.slice(0, 6)}…${sellerWalletResolved.slice(-4)}`
     : "not set";
 
   return (
