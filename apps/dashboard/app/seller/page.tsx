@@ -45,17 +45,22 @@ export default function SellerPage() {
   const [form, setForm] = useState({ id: "", name: "", priceUsd: "0.001", sellerWalletAddress: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ name: "", priceUsd: "", status: "active" as "active" | "disabled" });
-  const [balanceChip, setBalanceChip] = useState<string | null>(null);
+  const [sellerBalanceChip, setSellerBalanceChip] = useState<string | null>(null);
+  const [sellerBalanceAddress, setSellerBalanceAddress] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [emailInput, setEmailInput] = useState("");
 
-  const refreshBalance = useCallback(async () => {
+  const refreshSellerBalance = useCallback(async () => {
     try {
-      const res = await fetch("/api/balance");
-      const data = (await res.json()) as { usdcFormatted?: string | null };
-      setBalanceChip(data.usdcFormatted ?? null);
+      const res = await fetch("/api/wallet-balances", { cache: "no-store" });
+      const data = (await res.json()) as { seller?: { address?: string | null; balanceFormatted?: string | null } };
+      const formatted = data.seller?.balanceFormatted;
+      const n = formatted ? Number.parseFloat(formatted) : Number.NaN;
+      setSellerBalanceChip(Number.isFinite(n) ? `${n.toFixed(4)} USDC` : null);
+      setSellerBalanceAddress(data.seller?.address ?? null);
     } catch {
-      setBalanceChip(null);
+      setSellerBalanceChip(null);
+      setSellerBalanceAddress(null);
     }
   }, []);
 
@@ -91,15 +96,18 @@ export default function SellerPage() {
   useEffect(() => {
     const stored = window.localStorage.getItem("tg_seller_email");
     if (stored) setEmail(stored);
-    void refreshBalance();
+    void refreshSellerBalance();
     void refreshSession();
-  }, [refreshBalance, refreshSession]);
+  }, [refreshSellerBalance, refreshSession]);
 
   useEffect(() => {
     if (sessionOk !== true) return;
     void loadAgents();
     void loadTx();
-  }, [sessionOk, loadAgents, loadTx]);
+    void refreshSellerBalance();
+    const t = setInterval(() => void refreshSellerBalance(), 15000);
+    return () => clearInterval(t);
+  }, [sessionOk, loadAgents, loadTx, refreshSellerBalance]);
 
   const login = async () => {
     setAuthError(null);
@@ -180,7 +188,7 @@ export default function SellerPage() {
   if (!email) {
     return (
       <main className="min-h-screen bg-canvas text-ink">
-        <AppNav current="seller" balanceLabel={balanceChip} paymentMode="x402" apiOnline={true} />
+        <AppNav current="seller" paymentMode="x402" apiOnline={true} />
         <div className="mx-auto max-w-md px-4 py-12">
           <h1 className="text-2xl font-semibold">Seller sign-in</h1>
           <p className="mt-2 text-sm text-muted">Demo mode: any email unlocks seller view.</p>
@@ -212,7 +220,7 @@ export default function SellerPage() {
   if (sessionOk === null) {
     return (
       <main className="min-h-screen bg-canvas text-ink">
-        <AppNav current="seller" balanceLabel={balanceChip} paymentMode="x402" apiOnline={true} />
+        <AppNav current="seller" paymentMode="x402" apiOnline={true} />
         <div className="px-4 py-10 md:px-8">
           <p className="text-sm text-muted">Checking session…</p>
         </div>
@@ -223,7 +231,7 @@ export default function SellerPage() {
   if (!sessionOk) {
     return (
       <main className="min-h-screen bg-canvas text-ink">
-        <AppNav current="seller" balanceLabel={balanceChip} paymentMode="x402" apiOnline={true} />
+        <AppNav current="seller" paymentMode="x402" apiOnline={true} />
         <div className="mx-auto max-w-md px-4 py-12">
           <h1 className="text-2xl font-semibold">Seller console</h1>
           <p className="mt-2 text-sm text-muted">
@@ -259,10 +267,12 @@ export default function SellerPage() {
 
   return (
     <main className="min-h-screen bg-canvas text-ink">
-      <AppNav current="seller" balanceLabel={balanceChip} paymentMode="x402" apiOnline={true} />
+      <AppNav current="seller" paymentMode="x402" apiOnline={true} />
       <div className="mx-auto max-w-4xl px-4 py-4 text-sm text-muted md:px-8">
         Signed in as <span className="text-ink">{email}</span> · Seller wallet{" "}
-        <span className="font-mono text-ink">{sellerWalletShort}</span>
+        <span className="font-mono text-ink">{sellerWalletShort}</span> · Balance{" "}
+        <span className="font-medium text-ink">{sellerBalanceChip ?? "loading..."}</span>
+        {sellerBalanceAddress ? <span className="ml-1 text-xs">(from {sellerBalanceAddress.slice(0, 6)}…{sellerBalanceAddress.slice(-4)})</span> : null}
       </div>
       <div className="mx-auto max-w-4xl space-y-8 px-4 pb-8 md:px-8">
         <header className="flex flex-wrap items-center justify-between gap-4">

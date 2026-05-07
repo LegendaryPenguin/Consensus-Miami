@@ -4,7 +4,6 @@ import Link from "next/link";
 
 type AppNavProps = {
   current: "home" | "marketplace" | "seller" | "connect" | "tools";
-  balanceLabel?: string | null;
   networkLabel?: string;
   paymentMode?: string | null;
   apiOnline?: boolean | null;
@@ -18,7 +17,7 @@ const links: Array<{ key: AppNavProps["current"]; href: string; label: string }>
   { key: "tools", href: "/tools", label: "Tools" },
 ];
 
-export function AppNav({ current, balanceLabel, networkLabel = "Base Sepolia", paymentMode, apiOnline }: AppNavProps) {
+export function AppNav({ current, networkLabel = "Base Sepolia", paymentMode, apiOnline }: AppNavProps) {
   return (
     <header className="sticky top-0 z-20 border-b border-hairline/80 bg-canvas/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8">
@@ -40,11 +39,6 @@ export function AppNav({ current, balanceLabel, networkLabel = "Base Sepolia", p
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          {balanceLabel ? (
-            <span className="rounded-full border border-hairline bg-surface px-2.5 py-1 font-medium text-ink">
-              {balanceLabel}
-            </span>
-          ) : null}
           <span className="rounded-full border border-hairline bg-surface px-2.5 py-1 text-muted">{networkLabel}</span>
           <span
             className={`rounded-full border px-2.5 py-1 font-medium ${

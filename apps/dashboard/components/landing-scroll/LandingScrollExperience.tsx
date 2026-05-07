@@ -77,7 +77,6 @@ export default function LandingScrollExperience({ latestTx }: { latestTx?: Landi
               {stage.title}
             </p>
             <p className="mx-auto mt-3 max-w-xl text-sm text-muted md:text-base">{stage.subtitle}</p>
-            <p className="mt-4 text-xs text-muted">Scroll to advance the story on the card.</p>
           </div>
 
           <div className="relative h-full w-full pt-10">

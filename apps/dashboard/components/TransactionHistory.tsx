@@ -42,7 +42,7 @@ export function TransactionHistory({ items, loading, error, lastRefreshedAt }: T
           Updated {formatRelative(lastRefreshedAt ? new Date(lastRefreshedAt).toISOString() : null)}
         </p>
       </div>
-      <p className="mt-1 text-xs text-muted">USDC from buyer to seller on Base Sepolia (same window as your dashboard env).</p>
+      <p className="mt-1 text-xs text-muted">Live transfer feed for your configured Base Sepolia buyer and seller addresses.</p>
 
       {loading ? <p className="mt-4 text-sm text-muted">Loading transfers…</p> : null}
 

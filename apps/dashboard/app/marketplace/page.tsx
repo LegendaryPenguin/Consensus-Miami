@@ -14,14 +14,18 @@ const networkLabel =
   process.env.NEXT_PUBLIC_X402_NETWORK === "eip155:84532" || !process.env.NEXT_PUBLIC_X402_NETWORK
     ? "Base Sepolia"
     : (process.env.NEXT_PUBLIC_X402_NETWORK ?? "L2");
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const GOOGLE_USER_KEY = "tg_marketplace_google_user";
+
+type GoogleUser = { name: string; email: string };
 
 export default function MarketplacePage() {
   const router = useRouter();
   const sharedAgents = useMemo(() => listAgents(), []);
   const [marketplaceCards, setMarketplaceCards] = useState<MarketplaceCard[]>(() => toMarketplaceCards(sharedAgents));
   const [selectedAgentId] = useState("hackathon-research-agent");
-  const [balanceChip, setBalanceChip] = useState<string | null>(null);
-  const [balanceAddressShort, setBalanceAddressShort] = useState<string | null>(null);
+  const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
+  const [googleReady, setGoogleReady] = useState(false);
   const [apiHealth, setApiHealth] = useState<{ ok: boolean; paymentMode: string } | null>(null);
   const [txHistory, setTxHistory] = useState<Array<{ txHash: string; timestamp: string; amountUsdc: string }>>([]);
   const [txHistoryLoading, setTxHistoryLoading] = useState(true);
@@ -31,22 +35,7 @@ export default function MarketplacePage() {
   const buyerDisplayShort = useMemo(() => {
     const env = process.env.NEXT_PUBLIC_BUYER_WALLET_ADDRESS?.trim();
     if (env && /^0x[a-fA-F0-9]{40}$/i.test(env)) return shortenAddress(env) ?? env.slice(0, 10);
-    if (balanceAddressShort) return balanceAddressShort;
     return "configure buyer";
-  }, [balanceAddressShort]);
-
-  const refreshBalance = useCallback(async () => {
-    try {
-      const res = await fetch("/api/balance");
-      const data = (await res.json()) as {
-        usdcFormatted?: string | null;
-        addressShort?: string | null;
-      };
-      setBalanceChip(data.usdcFormatted ?? null);
-      setBalanceAddressShort(data.addressShort ?? null);
-    } catch {
-      setBalanceChip(null);
-    }
   }, []);
 
   const refreshTxHistory = useCallback(async () => {
@@ -74,17 +63,61 @@ export default function MarketplacePage() {
   }, []);
 
   useEffect(() => {
-    void refreshBalance();
-    void refreshTxHistory();
-    const t1 = setInterval(() => void refreshBalance(), 15000);
-    const t2 = setInterval(() => void refreshTxHistory(), 15000);
-    return () => {
-      clearInterval(t1);
-      clearInterval(t2);
-    };
-  }, [refreshBalance, refreshTxHistory]);
+    const raw = window.localStorage.getItem(GOOGLE_USER_KEY);
+    if (!raw) return;
+    try {
+      setGoogleUser(JSON.parse(raw) as GoogleUser);
+    } catch {
+      window.localStorage.removeItem(GOOGLE_USER_KEY);
+    }
+  }, []);
 
   useEffect(() => {
+    if (googleUser || !GOOGLE_CLIENT_ID) return;
+    let cancelled = false;
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (cancelled || !window.google?.accounts?.id) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: ({ credential }: { credential?: string }) => {
+          const user = parseGoogleCredential(credential);
+          if (!user) return;
+          window.localStorage.setItem(GOOGLE_USER_KEY, JSON.stringify(user));
+          setGoogleUser(user);
+        },
+      });
+      const el = document.getElementById("google-signin");
+      if (el) {
+        window.google.accounts.id.renderButton(el, {
+          theme: "outline",
+          size: "large",
+          shape: "pill",
+          text: "continue_with",
+        });
+      }
+      setGoogleReady(true);
+    };
+    document.head.appendChild(script);
+    return () => {
+      cancelled = true;
+    };
+  }, [googleUser]);
+
+  useEffect(() => {
+    if (!googleUser) return;
+    void refreshTxHistory();
+    const t2 = setInterval(() => void refreshTxHistory(), 15000);
+    return () => {
+      clearInterval(t2);
+    };
+  }, [googleUser, refreshTxHistory]);
+
+  useEffect(() => {
+    if (!googleUser) return;
     const t = setInterval(async () => {
       try {
         const [healthRes, agentsRes] = await Promise.all([
@@ -110,14 +143,31 @@ export default function MarketplacePage() {
       }
     }, 4000);
     return () => clearInterval(t);
-  }, []);
+  }, [googleUser]);
+
+  if (!googleUser) {
+    return (
+      <main className="relative min-h-screen bg-canvas px-4 py-8 text-ink md:px-8">
+        <div className="mx-auto mt-20 max-w-md rounded-panel border border-hairline bg-surface p-6 shadow-card">
+          <h1 className="text-2xl font-semibold tracking-tight">Marketplace sign-in</h1>
+          <p className="mt-2 text-sm text-muted">Continue with Google to open Marketplace.</p>
+          {!GOOGLE_CLIENT_ID ? (
+            <p className="mt-4 rounded border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+              Missing NEXT_PUBLIC_GOOGLE_CLIENT_ID. Add it to dashboard env, then reload.
+            </p>
+          ) : null}
+          <div id="google-signin" className="mt-5 min-h-10" />
+          {GOOGLE_CLIENT_ID && !googleReady ? <p className="mt-2 text-xs text-muted">Loading Google sign-in…</p> : null}
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="relative min-h-screen bg-canvas px-4 py-8 text-ink md:px-8">
       <GlobeBackground />
       <div className="relative mx-auto max-w-6xl space-y-8">
         <TopBar
-          balanceLabel={balanceChip}
           addressShort={buyerDisplayShort}
           networkLabel={networkLabel}
           paymentModeLabel={apiHealth?.paymentMode ?? null}
@@ -136,6 +186,35 @@ export default function MarketplacePage() {
       </div>
     </main>
   );
+}
+
+function parseGoogleCredential(credential?: string): GoogleUser | null {
+  if (!credential) return null;
+  const parts = credential.split(".");
+  if (parts.length < 2) return null;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))) as {
+      email?: string;
+      name?: string;
+    };
+    if (!payload.email) return null;
+    return { email: payload.email, name: payload.name ?? payload.email };
+  } catch {
+    return null;
+  }
+}
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: {
+          initialize: (options: { client_id: string; callback: (response: { credential?: string }) => void }) => void;
+          renderButton: (element: HTMLElement, options: Record<string, unknown>) => void;
+        };
+      };
+    };
+  }
 }
 
 function shortenAddress(address?: string): string | null {

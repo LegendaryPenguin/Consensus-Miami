@@ -17,24 +17,7 @@ export default function ToolsPage() {
   const [mode, setMode] = useState<"simulated" | "mock" | "x402">("simulated");
   const [apiHealth, setApiHealth] = useState<{ ok: boolean; paymentMode: string } | null>(null);
   const [copyState, setCopyState] = useState("Copy demo prompt");
-  const [balanceChip, setBalanceChip] = useState<string | null>(null);
   const prompt = "Use TollGate Bazaar and call the Hackathon Research Agent with x402 payment.";
-
-  const refreshBalance = useCallback(async () => {
-    try {
-      const res = await fetch("/api/balance");
-      const data = (await res.json()) as { usdcFormatted?: string | null };
-      setBalanceChip(data.usdcFormatted ?? null);
-    } catch {
-      setBalanceChip(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshBalance();
-    const t = setInterval(() => void refreshBalance(), 15000);
-    return () => clearInterval(t);
-  }, [refreshBalance]);
 
   useEffect(() => {
     const t = setInterval(async () => {
@@ -148,7 +131,6 @@ export default function ToolsPage() {
     <main className="min-h-screen bg-canvas text-ink">
       <AppNav
         current="tools"
-        balanceLabel={balanceChip}
         paymentMode={apiHealth?.paymentMode ?? null}
         apiOnline={apiHealth?.ok ?? null}
       />

@@ -10,10 +10,10 @@ export const LANDING_SCROLL_STAGES = [
   },
   {
     title: "x402 payment",
-    subtitle: "USDC moves buyer → seller on Base Sepolia.",
+    subtitle: "Payment authorization is submitted and settled on Base Sepolia.",
   },
   {
     title: "Verified receipt",
-    subtitle: "Proof of unlock — amount, network, and explorer link when available.",
+    subtitle: "A signed payment record confirms settlement details and unlock status end-to-end.",
   },
 ] as const;

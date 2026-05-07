@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 type TopBarProps = {
-  balanceLabel: string | null;
   addressShort: string;
   networkLabel: string;
   paymentModeLabel: string | null;
@@ -13,7 +12,6 @@ type TopBarProps = {
 };
 
 export function TopBar({
-  balanceLabel,
   addressShort,
   networkLabel,
   paymentModeLabel,
@@ -28,11 +26,6 @@ export function TopBar({
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-semibold tracking-tight text-ink md:text-2xl">TollGate Bazaar</h1>
-          {balanceLabel ? (
-            <span className="rounded-full border border-hairline bg-raised px-2.5 py-1 text-xs font-medium text-ink">
-              {balanceLabel}
-            </span>
-          ) : null}
           <span className="rounded-full border border-hairline bg-raised px-2.5 py-1 text-xs font-medium text-muted">
             {networkLabel}
           </span>
