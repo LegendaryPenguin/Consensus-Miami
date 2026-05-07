@@ -32,6 +32,8 @@ type TxRow = {
 };
 
 const EXPLORER = "https://sepolia.basescan.org/tx/";
+const ENV_SELLER_WALLET = process.env.NEXT_PUBLIC_SELLER_WALLET_ADDRESS?.trim() ?? "";
+const isAddress = (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v);
 
 export default function SellerPage() {
   const [agents, setAgents] = useState<SellerAgent[]>([]);
@@ -142,7 +144,8 @@ export default function SellerPage() {
     await loadAgents();
   };
 
-  const sellerWalletResolved = sellerBalanceAddress || agents[0]?.sellerWalletAddress || null;
+  const sellerWalletResolved =
+    sellerBalanceAddress || (isAddress(ENV_SELLER_WALLET) ? ENV_SELLER_WALLET : null) || agents[0]?.sellerWalletAddress || null;
   const sellerWalletShort = sellerWalletResolved
     ? `${sellerWalletResolved.slice(0, 6)}…${sellerWalletResolved.slice(-4)}`
     : "not set";
