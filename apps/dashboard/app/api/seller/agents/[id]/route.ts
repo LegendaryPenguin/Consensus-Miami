@@ -1,22 +1,16 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { COOKIE_NAME, getPaidAgentApiBase, getSellerSigningSecret, verifySellerSessionToken } from "../../../../../lib/sellerSession";
+import { getPaidAgentApiBase, getSellerSigningSecret } from "../../../../../lib/sellerSession";
 
-async function requireSellerCookie() {
+async function requireSellerSecret() {
   const secret = getSellerSigningSecret();
   if (!secret) return { error: NextResponse.json({ error: "seller_auth_not_configured" }, { status: 503 }) };
-  const jar = await cookies();
-  const token = jar.get(COOKIE_NAME)?.value;
-  if (!verifySellerSessionToken(token, secret)) {
-    return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
-  }
   return { secret };
 }
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, ctx: Ctx) {
-  const gate = await requireSellerCookie();
+  const gate = await requireSellerSecret();
   if ("error" in gate) return gate.error;
   const { id } = await ctx.params;
   const base = getPaidAgentApiBase();
@@ -35,7 +29,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
 }
 
 export async function DELETE(_request: Request, ctx: Ctx) {
-  const gate = await requireSellerCookie();
+  const gate = await requireSellerSecret();
   if ("error" in gate) return gate.error;
   const { id } = await ctx.params;
   const base = getPaidAgentApiBase();

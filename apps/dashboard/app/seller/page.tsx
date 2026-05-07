@@ -34,9 +34,6 @@ type TxRow = {
 const EXPLORER = "https://sepolia.basescan.org/tx/";
 
 export default function SellerPage() {
-  const [sessionOk, setSessionOk] = useState<boolean | null>(null);
-  const [secretInput, setSecretInput] = useState("");
-  const [authError, setAuthError] = useState<string | null>(null);
   const [agents, setAgents] = useState<SellerAgent[]>([]);
   const [txSummary, setTxSummary] = useState<{ totalCalls: number; totalRevenueUsd: string; transactions: TxRow[] } | null>(
     null,
@@ -47,8 +44,6 @@ export default function SellerPage() {
   const [editDraft, setEditDraft] = useState({ name: "", priceUsd: "", status: "active" as "active" | "disabled" });
   const [sellerBalanceChip, setSellerBalanceChip] = useState<string | null>(null);
   const [sellerBalanceAddress, setSellerBalanceAddress] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [emailInput, setEmailInput] = useState("");
 
   const refreshSellerBalance = useCallback(async () => {
     try {
@@ -62,12 +57,6 @@ export default function SellerPage() {
       setSellerBalanceChip(null);
       setSellerBalanceAddress(null);
     }
-  }, []);
-
-  const refreshSession = useCallback(async () => {
-    const res = await fetch("/api/seller/session", { cache: "no-store" });
-    const data = (await res.json()) as { ok?: boolean };
-    setSessionOk(Boolean(data.ok));
   }, []);
 
   const loadAgents = useCallback(async () => {
@@ -94,45 +83,13 @@ export default function SellerPage() {
   }, []);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("tg_seller_email");
-    if (stored) setEmail(stored);
     void refreshSellerBalance();
-    void refreshSession();
-  }, [refreshSellerBalance, refreshSession]);
-
-  useEffect(() => {
-    if (sessionOk !== true) return;
     void loadAgents();
     void loadTx();
     void refreshSellerBalance();
     const t = setInterval(() => void refreshSellerBalance(), 15000);
     return () => clearInterval(t);
-  }, [sessionOk, loadAgents, loadTx, refreshSellerBalance]);
-
-  const login = async () => {
-    setAuthError(null);
-    const res = await fetch("/api/seller/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ secret: secretInput }),
-    });
-    if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      setAuthError(data.error ?? "Login failed");
-      return;
-    }
-    setSecretInput("");
-    await refreshSession();
-  };
-
-  const logout = async () => {
-    await fetch("/api/seller/session", { method: "DELETE" });
-    window.localStorage.removeItem("tg_seller_email");
-    setEmail("");
-    setSessionOk(false);
-    setAgents([]);
-    setTxSummary(null);
-  };
+  }, [loadAgents, loadTx, refreshSellerBalance]);
 
   const addAgent = async () => {
     setLoadError(null);
@@ -185,82 +142,6 @@ export default function SellerPage() {
     await loadAgents();
   };
 
-  if (!email) {
-    return (
-      <main className="min-h-screen bg-canvas text-ink">
-        <AppNav current="seller" paymentMode="x402" apiOnline={true} />
-        <div className="mx-auto max-w-md px-4 py-12">
-          <h1 className="text-2xl font-semibold">Seller sign-in</h1>
-          <p className="mt-2 text-sm text-muted">Demo mode: any email unlocks seller view.</p>
-          <input
-            type="email"
-            autoComplete="email"
-            value={emailInput}
-            onChange={(e) => setEmailInput(e.target.value)}
-            className="mt-4 w-full rounded-panel border border-hairline bg-surface px-3 py-2 text-sm"
-            placeholder="you@example.com"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              const val = emailInput.trim();
-              if (!val) return;
-              window.localStorage.setItem("tg_seller_email", val);
-              setEmail(val);
-            }}
-            className="mt-4 w-full rounded border border-accent/50 bg-accent/15 py-2 text-sm font-medium text-accent"
-          >
-            Continue
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  if (sessionOk === null) {
-    return (
-      <main className="min-h-screen bg-canvas text-ink">
-        <AppNav current="seller" paymentMode="x402" apiOnline={true} />
-        <div className="px-4 py-10 md:px-8">
-          <p className="text-sm text-muted">Checking session…</p>
-        </div>
-      </main>
-    );
-  }
-
-  if (!sessionOk) {
-    return (
-      <main className="min-h-screen bg-canvas text-ink">
-        <AppNav current="seller" paymentMode="x402" apiOnline={true} />
-        <div className="mx-auto max-w-md px-4 py-12">
-          <h1 className="text-2xl font-semibold">Seller console</h1>
-          <p className="mt-2 text-sm text-muted">
-            Enter the demo secret from <code className="font-mono text-xs">SELLER_DEMO_SECRET</code>.
-          </p>
-          <input
-            type="password"
-            autoComplete="off"
-            value={secretInput}
-            onChange={(e) => setSecretInput(e.target.value)}
-            className="mt-4 w-full rounded-panel border border-hairline bg-surface px-3 py-2 font-mono text-sm"
-            placeholder="Demo secret"
-          />
-          {authError ? <p className="mt-2 text-sm text-danger">{authError}</p> : null}
-          <button
-            type="button"
-            onClick={() => void login()}
-            className="mt-4 w-full rounded border border-accent/50 bg-accent/15 py-2 text-sm font-medium text-accent"
-          >
-            Unlock
-          </button>
-          <Link href="/marketplace" className="mt-6 inline-block text-sm text-accent hover:underline">
-            ← Marketplace
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
   const sellerWalletShort = agents[0]?.sellerWalletAddress
     ? `${agents[0].sellerWalletAddress.slice(0, 6)}…${agents[0].sellerWalletAddress.slice(-4)}`
     : "not set";
@@ -269,8 +150,7 @@ export default function SellerPage() {
     <main className="min-h-screen bg-canvas text-ink">
       <AppNav current="seller" paymentMode="x402" apiOnline={true} />
       <div className="mx-auto max-w-4xl px-4 py-4 text-sm text-muted md:px-8">
-        Signed in as <span className="text-ink">{email}</span> · Seller wallet{" "}
-        <span className="font-mono text-ink">{sellerWalletShort}</span> · Balance{" "}
+        Seller wallet <span className="font-mono text-ink">{sellerWalletShort}</span> · Balance{" "}
         <span className="font-medium text-ink">{sellerBalanceChip ?? "loading..."}</span>
         {sellerBalanceAddress ? <span className="ml-1 text-xs">(from {sellerBalanceAddress.slice(0, 6)}…{sellerBalanceAddress.slice(-4)})</span> : null}
       </div>
@@ -284,9 +164,6 @@ export default function SellerPage() {
             <Link href="/marketplace" className="rounded border border-hairline bg-raised px-3 py-2 text-sm">
               Marketplace
             </Link>
-            <button type="button" onClick={() => void logout()} className="rounded border border-hairline px-3 py-2 text-sm">
-              Sign out
-            </button>
           </div>
         </header>
 
