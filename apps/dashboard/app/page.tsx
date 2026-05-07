@@ -47,13 +47,11 @@ export default function LandingPage() {
     <main className="min-h-screen bg-canvas text-ink">
       <AppNav
         current="home"
-        paymentMode={apiHealth?.paymentMode ?? null}
-        apiOnline={apiHealth?.ok ?? null}
       />
 
       <section className="mx-auto max-w-6xl px-4 pb-10 pt-8 md:px-8 md:pt-14">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-          <p className="text-xs uppercase tracking-[0.24em] text-muted">TollGate Bazaar</p>
+          <p className="text-xs uppercase tracking-[0.24em] text-muted">HandOff</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-6xl">Paid tools for Cursor agents.</h1>
           <p className="mt-4 max-w-xl text-sm text-muted">Discover agents, pay with x402, and unlock results on demand.</p>
 

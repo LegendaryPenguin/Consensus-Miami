@@ -17,7 +17,7 @@ export default function ToolsPage() {
   const [mode, setMode] = useState<"simulated" | "mock" | "x402">("simulated");
   const [apiHealth, setApiHealth] = useState<{ ok: boolean; paymentMode: string } | null>(null);
   const [copyState, setCopyState] = useState("Copy demo prompt");
-  const prompt = "Use TollGate Bazaar and call the Hackathon Research Agent with x402 payment.";
+  const prompt = "Use HandOff and call the Hackathon Research Agent with x402 payment.";
 
   useEffect(() => {
     const t = setInterval(async () => {
@@ -131,8 +131,6 @@ export default function ToolsPage() {
     <main className="min-h-screen bg-canvas text-ink">
       <AppNav
         current="tools"
-        paymentMode={apiHealth?.paymentMode ?? null}
-        apiOnline={apiHealth?.ok ?? null}
       />
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8">
         <div className="grid gap-6 lg:grid-cols-12">

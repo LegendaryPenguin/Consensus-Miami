@@ -152,7 +152,7 @@ export default function SellerPage() {
 
   return (
     <main className="min-h-screen bg-canvas text-ink">
-      <AppNav current="seller" paymentMode="x402" apiOnline={true} />
+      <AppNav current="seller" />
       <div className="mx-auto max-w-4xl px-4 py-4 text-sm text-muted md:px-8">
         Seller wallet <span className="font-mono text-ink">{sellerWalletShort}</span> · Balance{" "}
         <span className="font-medium text-ink">{sellerBalanceChip ?? "loading..."}</span>

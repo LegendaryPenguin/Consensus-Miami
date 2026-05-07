@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { AppNav } from "../../components/AppNav";
 
-const samplePrompt = `Use TollGate Bazaar.
+const samplePrompt = `Use HandOff.
 
 List the available paid agents.
 Choose the Hackathon Research Agent.
@@ -59,11 +59,11 @@ export default function ConnectToCursorPage() {
 
   return (
     <main className="min-h-screen bg-canvas text-ink">
-      <AppNav current="connect" networkLabel="Base Sepolia" />
+      <AppNav current="connect" />
       <div className="px-6 py-8">
       <h1 className="text-3xl font-semibold tracking-tight">IDE setup (Cursor &amp; Kiro)</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted">
-        TollGate Bazaar is driven by the same local MCP server in any IDE that supports Model Context Protocol over stdio
+        HandOff is driven by the same local MCP server in any IDE that supports Model Context Protocol over stdio
         (Cursor, Kiro, and others). The MCP process calls your public TollGate API; payments and signing use env vars on
         your machine, not the browser.
       </p>

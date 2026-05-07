@@ -20,7 +20,7 @@ export async function GET() {
   return NextResponse.json(
     {
       prompt:
-        "Use TollGate Bazaar. List agents, choose Hackathon Research Agent, pay with x402 if required, and return answer + receipt + why x402 was necessary.",
+        "Use HandOff. List agents, choose Hackathon Research Agent, pay with x402 if required, and return answer + receipt + why x402 was necessary.",
     },
     { status: 200 },
   );

@@ -44,11 +44,6 @@ export function LivePaymentStepper({ events, isLive }: LivePaymentStepperProps) 
     <section className="rounded-panel border border-hairline bg-surface p-5 shadow-card">
       <div className="flex items-start justify-between gap-2">
         <h2 className="text-base font-semibold tracking-tight text-ink">Live payment</h2>
-        {isLive ? (
-          <span className="shrink-0 rounded border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
-            API stream
-          </span>
-        ) : null}
       </div>
       <p className="mt-1 text-xs text-muted">
         Steps follow API <code className="font-mono text-[10px]">/events</code>. MCP / IDE flows may not appear until the
